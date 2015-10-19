@@ -21,7 +21,7 @@ let pad = (x, num) => {
 }
 
 module.exports = Base.extend({
-  constructor() {
+  constructor: function() {
     Base.apply(this, arguments);
 
     this.option('verbose', {

@@ -1,7 +1,8 @@
 'use strict';
 const url = require('url');
 const fs = require('fs');
-const FancyLoggingGenerator = require('./generator-fancy-logging');
+const childProcess = require('child_process');
+const FancyLoggingGenerator = require('../../generator-fancy-logging');
 const chalk = require('chalk');
 const mosay = require('mosay');
 const mozuAppGenerator = require('generator-mozu-app');
@@ -12,6 +13,9 @@ const validUrl = require('valid-url');
 const CORE_THEME_URL = 'https://github.com/mozu/core-theme.git';
 
 const BASETHEME = 'basetheme';
+
+const SUBGEN_PREFIX = require('../../package.json').name
+                      .replace(/^generator\-/,'');
 
 let Extending = {
   core: 'CORE',
@@ -36,10 +40,41 @@ module.exports = FancyLoggingGenerator.extend({
     this.env.error(reason);
   },
 
+  _willDie: function(reason) {
+    return e => {
+      this._die(reason + ' ' + e);
+    }
+  },
+
   _git: function(command, reason, options) {
-    this.verbose(`${reason}: \`git ${command}\``);
-    return shell.exec(`git ${command}`, 
-      { silent: options && options.silent || !this.shouldLogVerbose() });
+    return new Promise((resolve, reject) => {
+      this.verbose(`${reason}: \`git ${command}\``);
+      let opts = Object.assign({
+        cwd: this.destinationRoot(),
+        encoding: 'utf8',
+      }, options);
+      let proc = childProcess.spawn(
+        'git',
+        Array.isArray(command) ? command : command.split(' '),
+        opts
+      );
+      let output = '';
+      let errput = '';
+      if (proc.stdout) {
+        proc.stdout.on('data', chunk => output += chunk)
+      }
+      if (proc.stderr) {
+        proc.stderr.on('data', chunk => errput += chunk)
+      }
+      proc.on('close', code => {
+        if (code !== 0) {
+          reject(new Error(errput));
+        } else {
+          this.verbose(output);
+          resolve(output);
+        }
+      });
+    });
   },
 
   _newline: function() {
@@ -58,9 +93,6 @@ module.exports = FancyLoggingGenerator.extend({
   },
 
   initializing: {
-    setupState() {
-      this.state = {};
-    },
     greet() {
       this.log(mosay(
         'Welcome to the Mozu Theme generator! This will set up the current ' +
@@ -68,7 +100,11 @@ module.exports = FancyLoggingGenerator.extend({
         'releasing.'
       ));
     },
-    ensureGit() {
+    getInitialState() {
+      let done = this.async();
+      this.state = {};
+
+      // ensure git installed
       this.verbose('Confirming that `git` is installed...');
       if (!shell.which('git')) {
         this._die('`git` could not be found on your command path. Please ' +
@@ -76,59 +112,70 @@ module.exports = FancyLoggingGenerator.extend({
       } else {
         this.verbose.success('`git` is installed!');
       }
-    },
-    readDirectory() {
+
+      // read current directory
       this.state.startingFiles = fs.readdirSync(this.destinationPath());
       this.state.isEmptyDir = this.state.startingFiles.length === 0;
       this.state.hasThemeJson = 
         !!~this.state.startingFiles.indexOf('theme.json');
-    },
-    readRepo() {
-      this.state.isInRepo = this._git(
+
+      // read current repository state
+      this._git(
         'rev-parse --is-inside-work-tree',
-        'Checking if a repository exists already').code === 0;
-      this.verbose(
-        this.state.isInRepo ? 'Repository exists!' : 'No repository yet.');
-    },
-    readGitRemotes() {
-      const fetchRE = /\s*\(fetch\)$/;
-      if (this.state.isInRepo) {
-        let remotes = this._git(
+        'Checking if a repository exists already').then(
+          yes => this.state.isInRepo = true,
+          no => this.state.isInRepo = false
+      ).then(isInRepo => {
+        if (isInRepo) {
+          this.verbose('Git repository detected.');
+          return this._git(
           'remote -v',
-          `Looking for a remote named \`${BASETHEME}\``
-        );
-        if (remotes.code === 0 && remotes.output.trim()) {
-          this.state.remotes = remotes.output.split('\n')
-              .filter(line => fetchRE.test(line))
-              .reduce((result, line) => {
-                let parts = line.split('\t');
-                let name = parts[0];
-                let rest = parts[1];
-                result[name] = rest.replace(fetchRE,'');
-                return result;
-              }, {});
+          `Looking for an existing remote named \`${BASETHEME}\``);
         } else {
-          this.log.warning('Git repo detected, but no remotes found.');
+          this.verbose('No Git repository detected.');
+          return false;
+        }
+      }).then(remotes => {
+        if (!remotes) {
           this.state.remotes = {};
+        } else {
+          const fetchRE = /\s*\(fetch\)$/;
+          this.state.remotes = remotes.split('\n')
+            .filter(line => fetchRE.test(line))
+            .reduce((result, line) => {
+              let parts = line.split('\t');
+              let name = parts[0];
+              let rest = parts[1];
+              result[name] = rest.replace(fetchRE,'');
+              return result;
+          }, {});
         }
         if (this.state.remotes[BASETHEME]) {
           this.verbose(
             `Base theme found at \`${this.state.remotes[BASETHEME]}\``);
-          this.state.hasPreexistingBaseThemeRemote = true;
+            this.state.hasPreexistingBaseThemeRemote = true;
         }
-      } else {
-        this.state.remotes = {};
-      }
+        done();
+      });
     }
+  },
+  _composeSubWorkflow(name, opts) {
+    this.composeWith(`${SUBGEN_PREFIX}:${name}`, {
+      options: Object.assign({}, this.options, {
+        composed: true
+      }, opts)
+    });
   },
   dispatch() {
     if (this.state.isEmptyDir) {
-      this.composeWith('mozu-theme:brandnew');
+      this._composeSubWorkflow('brandnew');
     } else if (this.state.hasThemeJson) {
       if (this.state.isInRepo) {
-        this.composeWith('mozu-theme:legacygit');
+        this._die('Not implemented, hoss')
+        //this._composeSubWorkflow('legacygit');
       } else {
-        this.composeWith('mozu-theme:legacynogit');
+        this._die('Not implemented, hoss')
+        //this._composeSubWorkflow('legacynogit');
       } 
     } else {
       this._die('The current directory contains files that are not a Mozu ' +
@@ -137,7 +184,8 @@ module.exports = FancyLoggingGenerator.extend({
                 'theme that needs to be upgraded.');
     }
   }
-
+});
+/*
 
   prompting: {
     extending() {
@@ -372,3 +420,4 @@ module.exports = FancyLoggingGenerator.extend({
   }
 
 });
+*/
