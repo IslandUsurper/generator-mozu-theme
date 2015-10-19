@@ -7,6 +7,7 @@ const semver = require('semver');
 const validUrl = require('valid-url');
 const ThemeGeneratorBase = require('../app/');
 const slug = require('slug');
+const shell = require('shelljs');
 const MozuAppGenerator = require('generator-mozu-app');
 
 const CORE_THEME_URL = 'https://github.com/mozu/core-theme.git';
@@ -71,7 +72,8 @@ module.exports = ThemeGeneratorBase.extend({
         {
           type: 'input',
           name: 'friendlyName',
-          message: 'Friendly name for your theme:'
+          message: 'Public name for your new theme:',
+          validate: x => !!x || 'Please enter a name.'
         },
         {
           type: 'input',
@@ -131,12 +133,15 @@ module.exports = ThemeGeneratorBase.extend({
         let done = this.async();
         this._git(
           `ls-remote --tags ${this.state.baseTheme}`,
-          `Detecting base theme versions`
+          `Detecting base theme versions`,
+          {
+            quiet: true
+          }
         ).then(tags => {
           let uniques = new Set();
           this.state.baseThemeVersions = tags.trim().split('\n')
-          .map(line => {
-            let m = line.match(/([0-9A-Fa-f]+)\trefs\/tags\/v?([^\^]+)/i);
+          .map(l => {
+            let m = l.match(/([0-9A-Fa-f]+)\trefs\/tags\/v?([^\^]+)\^\{\}/i);
             if (m) {
               let version = semver.clean(m[2]);
               if (!uniques.has(version)) {
@@ -148,7 +153,10 @@ module.exports = ThemeGeneratorBase.extend({
               }
             }
           })
-          .filter(x => !!x && !!x.version)
+          .filter(this.options.prerelease ? 
+                  x => !!x && !!x.version
+                 :
+                  x => !!x && !!x.version && !~x.version.indexOf('-'))
           .sort((x, y) => semver.rcompare(x.version, y.version));
           done();
         }).catch(this._willDie('Failed detecting remote tags.'));
@@ -166,12 +174,12 @@ module.exports = ThemeGeneratorBase.extend({
           'you expected this.**'
         );
         this._confirm(
-          chalk.cyan(this.state.baseTheme) + ' is in pre-' +
+          'Yes, ' + chalk.cyan(this.state.baseTheme) + ' is in pre-' +
                     'production and has no tags.',
           false,
           yes => {
             if (!yes) {
-              this.die(
+              this._die(
                 `Check with the maintainer of ` +
                 `${chalk.cyan(this.state.baseTheme)} before continuing.`);
             } else {
@@ -215,12 +223,32 @@ module.exports = ThemeGeneratorBase.extend({
   configuring: {
     ensureRepo() {
       let createdRepo;
+      let done = this.async();
       if (this.state.baseTheme) {
-        createdRepo = this._git(
-          `clone --single-branch --origin ${BASETHEME} ` +
-          `${this.state.baseTheme} ${this.destinationRoot()}`,
-          `Cloning base theme repository in \`${process.cwd()}\`...`
-        );
+        createdRepo = [
+          [
+            `init .`,
+            `Creating new repository`
+          ],
+          [
+            `remote add ${BASETHEME} ${this.state.baseTheme}`,
+            `Adding basetheme remote to ${this.state.baseTheme}`
+          ],
+          [
+            `fetch --no-tags basetheme`,
+            `Fetching commits from basetheme`,
+            {
+              stdio: 'inherit', // for authentication
+              quiet: true // so it doesn't spit stdout back in verbose mode
+            }
+          ],
+          [
+            `checkout master`,
+            `Checking out master branch into working directory`
+          ]
+        ].reduce((task, args) => {
+          return task.then(() => this._git.apply(this, args));
+        }, Promise.resolve());
       } else {
         createdRepo = this._git(
           'init .',
@@ -229,7 +257,7 @@ module.exports = ThemeGeneratorBase.extend({
       }
       createdRepo
         .then(
-          this.async(),
+          () => done(),
           this._willDie('Failed to create repo.')
         );
     },
@@ -248,20 +276,9 @@ module.exports = ThemeGeneratorBase.extend({
         );
       }
     },
-    removeTags() {
-      if (this.state.baseTheme) {
-        let done = this.async();
-        this.verbose('Removing basetheme tags so as not to interfere with ' +
-                     'versioning...');
-        rimraf(this.destinationPath('.git/refs/tags/*'), e => {
-          if (e) this._die(e);
-          this.verbose('Successfully deleted git tags.');
-          done();
-        });
-      }
-    },
     resetToVersion() {
       if (this.state.baseThemeVersion) {
+        let done = this.async();
         this._git(
           `reset --hard ${this.state.baseThemeVersion.commit}`,
           `Resetting to the commit at ${this.state.baseThemeVersion.version}`
@@ -270,16 +287,18 @@ module.exports = ThemeGeneratorBase.extend({
         .then(() => {
           this.verbose.success('Successfully reset HEAD to ' +
                               this.state.baseThemeVersion.version);
-          return this._git(
-            `tag basetheme-${this.state.baseThemeVersion.version}`,
-            'Creating placeholder tag for last supported base theme version'
-          );
-        })
-        .catch(this._willDie('Failed to set placeholder tag.'))
-        .then(() => {
-          this.verbose.success('Set placeholder tag!');
-        }).then(this.async());
+          done();
+        });
       }
+    },
+    setPlaceholderTag() {
+      let done = this.async();
+      this._git(
+        `tag basetheme-${this.state.baseThemeVersion.version}`,
+        'Creating placeholder tag for last supported base theme version'
+      ).then(
+        () => done(),
+        this._willDie('Failed to set placeholder tag.'));
     }
   },
 
@@ -334,8 +353,6 @@ module.exports = ThemeGeneratorBase.extend({
         }
       );
 
-      delete pkg.repository;
-
       // no way to force conflict override on this.fs methods
       // using fs methods instead
       fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
@@ -362,11 +379,12 @@ module.exports = ThemeGeneratorBase.extend({
       this.verbose(theme.about);
     },
     initialCommit() {
+      let done = this.async();
       this._git(
         ['commit', '-am', '"Initial commit, package.json and theme.json"'],
         'Committing changed package.json and theme.json files...'
       ).then(
-        this.async(),
+        () => done(),
         this._willDie('Could not make initial commit.')
       );
     }
@@ -380,6 +398,10 @@ module.exports = ThemeGeneratorBase.extend({
         this.npmInstall();
       }
     }
+  },
+
+  end: {
+
   }
 
 });

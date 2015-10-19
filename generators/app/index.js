@@ -48,32 +48,38 @@ module.exports = FancyLoggingGenerator.extend({
 
   _git: function(command, reason, options) {
     return new Promise((resolve, reject) => {
-      this.verbose(`${reason}: \`git ${command}\``);
-      let opts = Object.assign({
-        cwd: this.destinationRoot(),
-        encoding: 'utf8',
-      }, options);
-      let proc = childProcess.spawn(
-        'git',
-        Array.isArray(command) ? command : command.split(' '),
-        opts
-      );
-      let output = '';
-      let errput = '';
-      if (proc.stdout) {
-        proc.stdout.on('data', chunk => output += chunk)
-      }
-      if (proc.stderr) {
-        proc.stderr.on('data', chunk => errput += chunk)
-      }
-      proc.on('close', code => {
-        if (code !== 0) {
-          reject(new Error(errput));
-        } else {
-          this.verbose(output);
-          resolve(output);
+      try {
+        this.verbose(`${reason}: \`git ${command}\``);
+        let opts = Object.assign({
+          cwd: this.destinationRoot(),
+          encoding: 'utf8',
+        }, options);
+        let quiet = opts.quiet;
+        delete opts.quiet; // in case that option ever affects node
+        let proc = childProcess.spawn(
+          'git',
+          Array.isArray(command) ? command : command.split(' '),
+          opts
+        );
+        let output = '';
+        let errput = '';
+        if (proc.stdout) {
+          proc.stdout.on('data', chunk => output += chunk)
         }
-      });
+        if (proc.stderr) {
+          proc.stderr.on('data', chunk => errput += chunk)
+        }
+        proc.on('close', code => {
+          if (code !== 0) {
+            reject(new Error(errput));
+          } else {
+            if (!quiet) this.verbose(output);
+            resolve(output);
+          }
+        });
+      } catch(e) {
+        reject(e);
+      }
     });
   },
 
