@@ -47,9 +47,18 @@ module.exports = FancyLoggingGenerator.extend({
   },
 
   _git: function(command, reason, options) {
+    let text;
+    let args;
+    if (Array.isArray(command)) {
+      text = command.join(' ');
+      args = command;
+    } else {
+      text = command;
+      args = command.split(' ');
+    }
     return new Promise((resolve, reject) => {
       try {
-        this.verbose(`${reason}: \`git ${command}\``);
+        this.verbose(`${reason}: \`git ${text}\``);
         let opts = Object.assign({
           cwd: this.destinationRoot(),
           encoding: 'utf8',
@@ -58,7 +67,7 @@ module.exports = FancyLoggingGenerator.extend({
         delete opts.quiet; // in case that option ever affects node
         let proc = childProcess.spawn(
           'git',
-          Array.isArray(command) ? command : command.split(' '),
+          args,
           opts
         );
         let output = '';
