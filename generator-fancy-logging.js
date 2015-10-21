@@ -11,7 +11,10 @@ const Base = require('yeoman-generator').generators.Base;
 marked.setOptions({
   renderer: new TerminalRenderer({
     strong: chalk.bold.underline,
-    em: chalk.bold
+    em: chalk.bold,
+    showSectionPrefix: false,
+    reflowText: true,
+    width: 80
   })
 });
 
