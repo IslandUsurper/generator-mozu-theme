@@ -33,10 +33,16 @@ module.exports = FancyLoggingGenerator.extend({
       alias: 'p',
       type: Boolean
     });
+
+    this.option('debug', {
+      desc: 'Show debugging information on error',
+      type: Boolean
+    });
   },
 
   _die: function(reason) {
     this.verbose.fatal(reason);
+    if (this.options.debug) this.emit('error', reason);
     this.env.error(reason);
   },
 
@@ -58,7 +64,9 @@ module.exports = FancyLoggingGenerator.extend({
     }
     return new Promise((resolve, reject) => {
       try {
-        this.verbose(`${reason}: \`git ${text}\``);
+        this.verbose(reason + ': \n      ' + chalk.yellow('git ' + text), {
+          markdown: false
+        });
         let opts = Object.assign({
           cwd: this.destinationRoot(),
           encoding: 'utf8',
@@ -113,7 +121,7 @@ module.exports = FancyLoggingGenerator.extend({
         'Welcome to the Mozu Theme generator! This will set up the current ' +
         'directory as a Mozu theme, ready for building, syncing, and ' +
         'releasing.'
-      ));
+      ), { markdown: false });
     },
     getInitialState() {
       let done = this.async();
