@@ -48,6 +48,7 @@ module.exports = ThemeGeneratorBase.extend({
       if (!this.options.composed) {
         _super.initializing.greet.call(this);
       }
+      this.log('\n## Setting up a new Mozu theme in an empty directory.');
     },
     getInitialState() {
       if (this.options.composed) {
@@ -67,7 +68,7 @@ module.exports = ThemeGeneratorBase.extend({
   prompting: {
     extending() {
       let done = this.async();
-      this.log(''); // newline
+      this._newline();
       this.prompt([
         {
           type: 'input',
@@ -92,6 +93,15 @@ module.exports = ThemeGeneratorBase.extend({
               'minor.patch-pre.prepatch.\n\nExamples: 0.1.0, 3.21.103, ' +
               '3.9.22-variant.0'
         },
+        // {
+        //   type: 'input',
+        //   name: 'origin',
+        //   message: 'Origin repository URL for this theme: (blank if none)',
+        //   validate: u =>
+        //     !u || !!validUrl.isUri(u) || 'Please provide a valid URL for ' +
+        //       'your origin repository, or leave it blank if you aren\'t ' +
+        //       'using one.'
+        // },
         {
           type: 'list',
           name: 'extending',
@@ -159,7 +169,8 @@ module.exports = ThemeGeneratorBase.extend({
                   x => !!x && !!x.version && !~x.version.indexOf('-'))
           .sort((x, y) => semver.rcompare(x.version, y.version));
           done();
-        }).catch(this._willDie('Failed detecting remote tags.'));
+        }).catch(this._willDie('Failed detecting remote tags. Is ' +
+                                this.state.baseTheme + ' a valid git URL?\n'));
       }
     },
     ensureVersionsExist() {
@@ -170,8 +181,8 @@ module.exports = ThemeGeneratorBase.extend({
         this.log.warning(
           'Your base theme repository appears to have no semantically ' +
           'versioned tags. Git tags are how themes declare and release ' +
-          'their production versions. ' + '**You should only continue if ' +
-          'you expected this.**'
+          'their production versions. **You should only continue if you ' +
+          'expected this.**'
         );
         this._confirm(
           'Yes, ' + chalk.cyan(this.state.baseTheme) + ' is in pre-' +
@@ -202,7 +213,10 @@ module.exports = ThemeGeneratorBase.extend({
         if (this.options.prerelease) {
           versionChoices.unshift({
             name: 'HEAD (latest, unreleased commit)',
-            value: false
+            value: {
+              commit: 'HEAD',
+              version: 'HEAD'
+            }
           });
         }
         this.prompt([
@@ -210,7 +224,8 @@ module.exports = ThemeGeneratorBase.extend({
             type: 'list',
             name: 'baseThemeVersion',
             message: 'Version of base theme to inherit:',
-            choices: versionChoices
+            choices: versionChoices,
+            default: versionChoices[0].value
           }
         ], answers => {
           this.state.baseThemeVersion = answers.baseThemeVersion;
@@ -221,45 +236,55 @@ module.exports = ThemeGeneratorBase.extend({
   },
 
   configuring: {
-    ensureRepo() {
-      let createdRepo;
+    initRepo() {
       let done = this.async();
+      this._git(
+        'init .',
+        `Creating repository in \`${process.cwd()}\`...`
+      ).then(
+        () => done(),
+        this._willDie('Failed to create repo.')
+      );
+    },
+    // setOrigin() {
+    //   if (this.state.origin) {
+    //     let done = this.async();
+    //     this._git(
+    //       'remote add -f --tags origin ' + this.state.origin,
+    //       'Adding origin repository at ' + this.state.origin,
+    //     ).then(() =>
+    //       this._git(
+    //         'checkout master'
+    //       ))
+    //   }
+    // },
+    ensureRepo() {
       if (this.state.baseTheme) {
-        createdRepo = [
-          [
-            `init .`,
-            `Creating new repository`
-          ],
-          [
-            `remote add ${BASETHEME} ${this.state.baseTheme}`,
-            `Adding basetheme remote to ${this.state.baseTheme}`
-          ],
-          [
-            `fetch --no-tags basetheme`,
-            `Fetching commits from basetheme`,
+        let done = this.async();
+        this._git(
+          `remote add ${BASETHEME} -t master ${this.state.baseTheme}`,
+          `Adding basetheme remote`
+        ).then(
+          () => this._git(
+            `config remote.${BASETHEME}.tagopt --no-tags`,
+            `Configuring ${BASETHEME} not to fetch tags`
+        )).then(
+          () => this._git(
+            `fetch --no-tags ${BASETHEME}`,
+            `Fetching commits from ${BASETHEME}`,
             {
               stdio: 'inherit', // for authentication
               quiet: true // so it doesn't spit stdout back in verbose mode
             }
-          ],
-          [
-            `checkout master`,
-            `Checking out master branch into working directory`
-          ]
-        ].reduce((task, args) => {
-          return task.then(() => this._git.apply(this, args));
-        }, Promise.resolve());
-      } else {
-        createdRepo = this._git(
-          'init .',
-          `Creating repository in \`${process.cwd()}\`...`
+        )).then(
+          () => this._git(
+            `branch --no-track master ${BASETHEME}/master`,
+            `Basing master branch on ${BASETHEME}/master`
+        )).then(
+          () => done(),
+          this._willDie('Failed to attach base theme remote.')
         );
       }
-      createdRepo
-        .then(
-          () => done(),
-          this._willDie('Failed to create repo.')
-        );
     },
     preventPush() {
       if (this.state.baseTheme) {
@@ -283,22 +308,24 @@ module.exports = ThemeGeneratorBase.extend({
           `reset --hard ${this.state.baseThemeVersion.commit}`,
           `Resetting to the commit at ${this.state.baseThemeVersion.version}`
         )
-        .catch(this._willDie('Failed to set version.'))
+        .catch(this._willDie('Failed to set to version.'))
         .then(() => {
-          this.verbose.success('Successfully reset HEAD to ' +
+          this.verbose.success('Set working directory to ' +
                               this.state.baseThemeVersion.version);
           done();
         });
       }
     },
     setPlaceholderTag() {
-      let done = this.async();
-      this._git(
-        `tag basetheme-${this.state.baseThemeVersion.version}`,
-        'Creating placeholder tag for last supported base theme version'
-      ).then(
+      if (this.state.baseThemeVersion) {
+        let done = this.async();
+        this._git(
+          `tag basetheme-${this.state.baseThemeVersion.version}`,
+          'Creating placeholder tag for last supported base theme version'
+        ).then(
         () => done(),
-        this._willDie('Failed to set placeholder tag.'));
+          this._willDie('Failed to set placeholder tag.'));
+      }
     }
   },
 
@@ -345,10 +372,6 @@ module.exports = ThemeGeneratorBase.extend({
             name: username,
             email: email
           },
-          repository: {
-            type: 'git',
-            url: `https://example.com/~${username}/${pkgName}`
-          },
           license: 'UNLICENSED'
         }
       );
@@ -365,7 +388,7 @@ module.exports = ThemeGeneratorBase.extend({
       this.verbose('Setting up theme.json file');
       let themePath = this.destinationPath('theme.json');
 
-      let theme = this.fs.readJSON(themePath, {});
+      let theme = this.fs.readJSON(themePath, { about: {} });
       theme.about = Object.assign(theme.about, {
         author: this.user.git.name(),
         'extends': null,
@@ -378,13 +401,38 @@ module.exports = ThemeGeneratorBase.extend({
       this.verbose('theme.json `about` contents:');
       this.verbose(theme.about);
     },
+    fixGitIgnore() {
+      //we need a .gitignore for the config file
+      let gitIgnorePath = this.destinationPath('.gitignore');
+      let currentGitignore = this.fs.read(gitIgnorePath, { defaults: '' })
+          .split('\n');
+      if (!~currentGitignore.indexOf('mozu.config.json') &&
+          !this.options['skip-app']) {
+        this.verbose('Adding "mozu.config.json" to ' + gitIgnorePath);
+        currentGitignore.push('mozu.config.json');
+        fs.writeFileSync(gitIgnorePath, currentGitignore.join('\n'), 'utf8');
+        this.state.gitIgnoreModified = true;
+      }
+    },
     initialCommit() {
       let done = this.async();
+      let changedFiles = 'package.json theme.json';
+      if (this.state.gitIgnoreModified) {
+        changedFiles += ' .gitignore'
+      }
       this._git(
-        ['commit', '-am', '"Initial commit, package.json and theme.json"'],
-        'Committing changed package.json and theme.json files...'
+        `add ${changedFiles}`,
+        'Staging changed files'
+      ).then(() =>
+        this._git(
+          ['commit', '-m', '"Initial commit"'],
+          'Committing changed package.json and theme.json files...')
       ).then(
-        () => done(),
+        () => {
+          this.log.success('Created initial commit with package.json ' +
+                           'and theme.json. Repository is ready.');
+          done();
+        },
         this._willDie('Could not make initial commit.')
       );
     }
@@ -392,7 +440,7 @@ module.exports = ThemeGeneratorBase.extend({
 
   install: {
     inst() {
-      if (this.options['skip-install']) {
+      if (this.options['skip-install'] || !this.state.baseTheme) {
         this.verbose.warning('Skipping `npm install`.')
       } else {
         this.npmInstall();
