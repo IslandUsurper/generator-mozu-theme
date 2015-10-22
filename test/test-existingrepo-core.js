@@ -44,7 +44,6 @@ test('repo cloned', t => {
     ),
     `origin set to ${origin}`
   );
-  t.comment(git('remote -v').output);
   t.ok(
     RegExp(`basetheme\t${constants.CORE_THEME_URL}`).test(
       git('remote -v').output
