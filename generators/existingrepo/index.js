@@ -258,7 +258,7 @@ If you believe this message is in error, then check your \`theme.json\` ` +
 
   install: {
     inst() {
-      if (this.options['skip-install'] || !this.state.baseTheme) {
+      if (this.options['skip-install']) {
         this.verbose.warning('Skipping `npm install`.')
       } else {
         this.npmInstall();
