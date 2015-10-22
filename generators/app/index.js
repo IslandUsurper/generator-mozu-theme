@@ -10,18 +10,12 @@ const shell = require('shelljs');
 const semver = require('semver');
 const validUrl = require('valid-url');
 
-const CORE_THEME_URL = 'https://github.com/mozu/core-theme.git';
-
-const BASETHEME = 'basetheme';
-
-const SUBGEN_PREFIX = require('../../package.json').name
-                      .replace(/^generator\-/,'');
-
-let Extending = {
-  core: 'CORE',
-  another: 'ANOTHER',
-  nothing: 'NOTHING'
-}
+const constants = require('../../constants');
+const BeginWith = constants.BeginWith;
+const Extending = constants.Extending;
+const CORE_THEME_URL = constants.CORE_THEME_URL;
+const BASETHEME = constants.BASETHEME;
+const SUBGEN_PREFIX = constants.SUBGEN_PREFIX;
 
 module.exports = FancyLoggingGenerator.extend({
 
@@ -115,6 +109,118 @@ module.exports = FancyLoggingGenerator.extend({
     ], a => cb(a.yes));
   },
 
+  _promptForBaseTheme: function(options, callback) {
+    const userOpts = typeof callback === "function" ? options : {};
+    const done = callback || options;
+    const opts = Object.assign({}, {
+      extendingMessage: 'What base theme does this theme inherit from?',
+      baseThemeMessage: 'Repository URL for the base theme:'
+    }, userOpts);
+    this.prompt([
+      {
+        type: 'list',
+        name: 'extending',
+        message: opts.extendingMessage,
+        choices: [{
+          name: 'Mozu Core Theme',
+          value: Extending.core
+        }, {
+          name: 'Another theme',
+          value: Extending.another
+        }, {
+          name: 'Nothing',
+          value: Extending.nothing
+        }],
+        default: Extending.core
+      },
+      {
+        type: 'input',
+        name: 'baseTheme',
+        message: opts.baseThemeMessage,
+        validate: u => 
+        !!validUrl.isUri(u) ||
+          'Please provide a full URL for your base theme repository. ' +
+          'If it is a local folder, use a file:// URL.'
+            ,
+          when: answers =>
+          answers.extending === Extending.another
+      }
+    ], answers => {
+      Object.assign(this.state, answers);
+      if (this.state.extending === Extending.core) {
+        this.state.baseTheme = CORE_THEME_URL;
+      }
+      done();
+    });
+  },
+
+  _fetchBaseThemeTags: function(done) {
+    this._git(
+      `ls-remote --tags ${this.state.baseTheme}`,
+      `Detecting base theme versions`,
+      {
+        quiet: true
+      }
+    ).then(tags => {
+      let uniques = new Set();
+      this.state.baseThemeVersions = tags.trim().split('\n')
+      .map(l => {
+        let m = l.match(/([0-9A-Fa-f]+)\trefs\/tags\/v?([^\^]+)\^\{\}/i);
+        if (m) {
+          let version = semver.clean(m[2]);
+          if (!uniques.has(version)) {
+            uniques.add(version);
+            return {
+              commit: m[1],
+              version: version
+            };
+          }
+        }
+      })
+      .filter(this.options.prerelease ? 
+              x => !!x && !!x.version
+                :
+                  x => !!x && !!x.version && !~x.version.indexOf('-'))
+                .sort((x, y) => semver.rcompare(x.version, y.version));
+                done();
+    }).catch(this._willDie('Failed detecting remote tags. Is ' +
+                           this.state.baseTheme + ' a valid git URL?\n'));
+  },
+
+  _ensureVersionsExist(done) {
+    if (!this.state.baseTheme || this.state.baseThemeVersions.length > 0) {
+      done();
+    } else {
+      this.log.warning(
+        'Your base theme repository appears to have no semantically ' +
+          'versioned tags. Git tags are how themes declare and release ' +
+          'their production versions. **You should only continue if you ' +
+          'expected this.**'
+      );
+      this._confirm(
+        'Yes, ' + chalk.cyan(this.state.baseTheme) + ' is in pre-' +
+          'production and has no tags.',
+        false,
+        yes => {
+          if (!yes) {
+            this._die(
+              `Check with the maintainer of ` +
+                `${chalk.cyan(this.state.baseTheme)} before continuing.`);
+          } else {
+            this.verbose('Repository will be left at HEAD.');
+            done();
+          }
+        }
+      );
+    }
+  },
+
+  _signoff: function() {
+    this._newline();
+    this.log.success('## All done. This directory is now a Mozu theme.');
+    this._newline();
+  },
+
   initializing: {
     greet() {
       this.log(mosay(
@@ -189,9 +295,38 @@ module.exports = FancyLoggingGenerator.extend({
       }, opts)
     });
   },
+  promptForDispatch() {
+    if (this.state.isEmptyDir) {
+      let done = this.async();
+      this.log('## The current directory is empty!\nDo you want to begin a ' +
+               ' brand new theme based on a parent them, or get an existing ' +
+               ' from a Git repository and set up a working theme directory ' +
+               ' with it?');
+      this.prompt([
+        {
+          name: 'beginWith',
+          type: 'list',
+          message: 'How shall we proceed?',
+          choices: [
+            {
+              name: 'Existing theme from repository',
+              value: BeginWith.repo
+            },
+            {
+              name: 'Brand new theme',
+              value: BeginWith.brandnew
+            },
+          ]
+        }
+      ], answers => {
+        this.state.beginWith = answers.beginWith;
+        done();
+      });
+    }
+  },
   dispatch() {
     if (this.state.isEmptyDir) {
-      this._composeSubWorkflow('brandnew');
+      this._composeSubWorkflow(this.state.beginWith);
     } else if (this.state.hasThemeJson) {
       if (this.state.isInRepo) {
         this._die('Not implemented, hoss')

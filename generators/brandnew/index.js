@@ -1,5 +1,6 @@
 'use strict';
 const url = require('url');
+const path = require('path');
 const fs = require('fs');
 const rimraf = require('rimraf');
 const chalk = require('chalk');
@@ -10,15 +11,13 @@ const slug = require('slug');
 const shell = require('shelljs');
 const MozuAppGenerator = require('generator-mozu-app');
 
-const CORE_THEME_URL = 'https://github.com/mozu/core-theme.git';
+const constants = require('../../constants');
+const Extending = constants.Extending;
+const CORE_THEME_URL = constants.CORE_THEME_URL;
+const BASETHEME = constants.BASETHEME;
 
-const BASETHEME = 'basetheme';
-
-let Extending = {
-  core: 'CORE',
-  another: 'ANOTHER',
-  nothing: 'NOTHING'
-}
+const THIS_GENERATOR_NAME = 
+  `${constants.SUBGEN_PREFIX}:${path.basename(__dirname)}`;
 
 const _super = ThemeGeneratorBase.prototype;
 
@@ -48,7 +47,7 @@ module.exports = ThemeGeneratorBase.extend({
       if (!this.options.composed) {
         _super.initializing.greet.call(this);
       }
-      this.log('\n## Setting up a new Mozu theme in an empty directory.');
+      this.log('## Setting up a new Mozu theme in an empty directory.');
     },
     getInitialState() {
       if (this.options.composed) {
@@ -59,14 +58,14 @@ module.exports = ThemeGeneratorBase.extend({
     },
     ensureEmptyDirectory() {
       if (!this.options.composed && !this.state.isEmptyDir) {
-        this._die('Cannot run `mozu-theme:brandnew` generator in a non-' +
+        this._die(`Cannot run \`${THIS_GENERATOR_NAME}\` generator in a non-` +
                   'empty directory.');
       }
     }
   },
 
   prompting: {
-    extending() {
+    basicMetadata() {
       let done = this.async();
       this._newline();
       this.prompt([
@@ -92,114 +91,22 @@ module.exports = ThemeGeneratorBase.extend({
               'Please supply a valid semantic version of the form major.' +
               'minor.patch-pre.prepatch.\n\nExamples: 0.1.0, 3.21.103, ' +
               '3.9.22-variant.0'
-        },
-        // {
-        //   type: 'input',
-        //   name: 'origin',
-        //   message: 'Origin repository URL for this theme: (blank if none)',
-        //   validate: u =>
-        //     !u || !!validUrl.isUri(u) || 'Please provide a valid URL for ' +
-        //       'your origin repository, or leave it blank if you aren\'t ' +
-        //       'using one.'
-        // },
-        {
-          type: 'list',
-          name: 'extending',
-          message: 'Base theme to inherit from:',
-          choices: [{
-            name: 'Mozu Core Theme',
-            value: Extending.core
-          }, {
-            name: 'Another theme',
-            value: Extending.another
-          }, {
-            name: 'Nothing',
-            value: Extending.nothing
-          }],
-          default: Extending.core
-        },
-        {
-          type: 'input',
-          name: 'baseTheme',
-          message: 'Repository URL for your base theme:',
-          validate: u => 
-            !!validUrl.isUri(u) ||
-            'Please provide a full URL for your base theme repository. ' +
-            'If it is a local folder, use a file:// URL.'
-          ,
-          when: answers =>
-            answers.extending === Extending.another
         }
       ], answers => {
         Object.assign(this.state, answers);
-        if (this.state.extending === Extending.core) {
-          this.state.baseTheme = CORE_THEME_URL;
-        }
         done();
-      })
+      });
     },
-    fetchRemoteTags() {
+    extending() {
+      this._promptForBaseTheme(this.async());
+    },
+    fetchBaseThemeTags() {
       if (this.state.baseTheme) {
-        let done = this.async();
-        this._git(
-          `ls-remote --tags ${this.state.baseTheme}`,
-          `Detecting base theme versions`,
-          {
-            quiet: true
-          }
-        ).then(tags => {
-          let uniques = new Set();
-          this.state.baseThemeVersions = tags.trim().split('\n')
-          .map(l => {
-            let m = l.match(/([0-9A-Fa-f]+)\trefs\/tags\/v?([^\^]+)\^\{\}/i);
-            if (m) {
-              let version = semver.clean(m[2]);
-              if (!uniques.has(version)) {
-                uniques.add(version);
-                return {
-                  commit: m[1],
-                  version: version
-                };
-              }
-            }
-          })
-          .filter(this.options.prerelease ? 
-                  x => !!x && !!x.version
-                 :
-                  x => !!x && !!x.version && !~x.version.indexOf('-'))
-          .sort((x, y) => semver.rcompare(x.version, y.version));
-          done();
-        }).catch(this._willDie('Failed detecting remote tags. Is ' +
-                                this.state.baseTheme + ' a valid git URL?\n'));
+        this._fetchBaseThemeTags(this.async());
       }
     },
     ensureVersionsExist() {
-      let done = this.async();
-      if (!this.state.baseTheme || this.state.baseThemeVersions.length > 0) {
-        done();
-      } else {
-        this.log.warning(
-          'Your base theme repository appears to have no semantically ' +
-          'versioned tags. Git tags are how themes declare and release ' +
-          'their production versions. **You should only continue if you ' +
-          'expected this.**'
-        );
-        this._confirm(
-          'Yes, ' + chalk.cyan(this.state.baseTheme) + ' is in pre-' +
-                    'production and has no tags.',
-          false,
-          yes => {
-            if (!yes) {
-              this._die(
-                `Check with the maintainer of ` +
-                `${chalk.cyan(this.state.baseTheme)} before continuing.`);
-            } else {
-              this.verbose('Repository will be left at HEAD.');
-              done();
-            }
-          }
-        );
-      }
+      this._ensureVersionsExist(this.async());
     },
     selectVersions() {
       var done = this.async();
@@ -392,6 +299,7 @@ module.exports = ThemeGeneratorBase.extend({
       theme.about = Object.assign(theme.about, {
         author: this.user.git.name(),
         'extends': null,
+        baseTheme: this.state.baseTheme,
         name: `${this.state.friendlyName} v${this.state.version}`
       });
 

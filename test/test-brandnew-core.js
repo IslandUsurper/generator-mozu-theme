@@ -4,7 +4,11 @@ var path = require('path');
 var assert = require('yeoman-generator').assert;
 var helpers = require('yeoman-generator').test;
 var shell = require('shelljs');
-var test = require('tape-catch');
+var test = require('tape');
+
+const constants = require('../constants');
+const BeginWith = constants.BeginWith;
+const Extending = constants.Extending;
 
 const git = arg => shell.exec(`git ${arg}`, { silent: true });
 
@@ -17,16 +21,21 @@ test('setup', t =>
     debug: true
   })
   .withPrompts({
+    beginWith: BeginWith.brandnew,
     friendlyName: 'Test Brandnew™',
     description: 'testing',
     version: '0.1.0',
-    extending: 'CORE'
-  }).on('end',t.end).on('error',t.fail)
+    extending: Extending.core
+  }).on('end',t.end).on('error',e => {
+    t.fail(`${e.message}: \n ${e.stack}`);
+  })
 );
 
 test('repository created', t => {
-  t.plan(7);
-  t.equal(0, git('rev-parse --is-inside-work-tree').code,
+  t.plan(8);
+  t.equal(
+    0, 
+    git('rev-parse --is-inside-work-tree').code,
     'repo exists'
   );
   t.equal(
@@ -52,6 +61,11 @@ test('repository created', t => {
   t.doesNotThrow(
     () => assert.fileContent('theme.json', /"name": "Test Brandnew™ v0.1.0/),
     'name set in theme.json'
+  );
+  t.doesNotThrow(
+    () => assert.fileContent('theme.json',
+      RegExp(`"baseTheme": "${constants.CORE_THEME_URL}"`)),
+    'core theme set in theme.json'
   );
 });
 
