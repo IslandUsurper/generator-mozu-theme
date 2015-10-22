@@ -37,7 +37,6 @@
     "yeoman-generator": "^0.20.3"
   },
   "devDependencies": {
-    "tape": "^4.2.2",
-    "tape-catch": "^1.0.4"
+    "tape": "^4.2.2"
   }
 }
