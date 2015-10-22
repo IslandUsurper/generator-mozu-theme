@@ -357,7 +357,9 @@ module.exports = ThemeGeneratorBase.extend({
   },
 
   end: {
-
+    signoff() {
+      this._signoff();
+    }
   }
 
 });
