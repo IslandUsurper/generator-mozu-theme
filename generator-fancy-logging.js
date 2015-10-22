@@ -14,7 +14,7 @@ marked.setOptions({
     em: chalk.bold,
     showSectionPrefix: false,
     reflowText: true,
-    width: 80
+    width: 66
   })
 });
 

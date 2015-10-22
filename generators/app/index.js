@@ -299,9 +299,9 @@ module.exports = FancyLoggingGenerator.extend({
     if (this.state.isEmptyDir) {
       let done = this.async();
       this.log('## The current directory is empty!\nDo you want to begin a ' +
-               ' brand new theme based on a parent them, or get an existing ' +
-               ' from a Git repository and set up a working theme directory ' +
-               ' with it?');
+               'brand new theme based on a parent theme, or clone an ' +
+               'existing theme from a Git repository and set up a working ' +
+               'theme directory with it?');
       this.prompt([
         {
           name: 'beginWith',
@@ -320,6 +320,7 @@ module.exports = FancyLoggingGenerator.extend({
         }
       ], answers => {
         this.state.beginWith = answers.beginWith;
+        this._newline();
         done();
       });
     }
