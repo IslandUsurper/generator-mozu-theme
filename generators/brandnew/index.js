@@ -5,11 +5,11 @@ const fs = require('fs');
 const rimraf = require('rimraf');
 const chalk = require('chalk');
 const semver = require('semver');
-const validUrl = require('valid-url');
 const ThemeGeneratorBase = require('../app/');
 const slug = require('slug');
 const shell = require('shelljs');
 const MozuAppGenerator = require('generator-mozu-app');
+const find = require('lodash.find');
 
 const constants = require('../../constants');
 const Extending = constants.Extending;
@@ -109,35 +109,8 @@ module.exports = ThemeGeneratorBase.extend({
       this._ensureVersionsExist(this.async());
     },
     selectVersions() {
-      var done = this.async();
-      if (!this.state.baseTheme || this.state.baseThemeVersions.length === 0) {
-        done();
-      } else {
-        let versionChoices = this.state.baseThemeVersions.map(x => ({
-          name: x.version,
-          value: x
-        }));
-        if (this.options.prerelease) {
-          versionChoices.unshift({
-            name: 'HEAD (latest, unreleased commit)',
-            value: {
-              commit: 'HEAD',
-              version: 'HEAD'
-            }
-          });
-        }
-        this.prompt([
-          {
-            type: 'list',
-            name: 'baseThemeVersion',
-            message: 'Version of base theme to inherit:',
-            choices: versionChoices,
-            default: versionChoices[0].value
-          }
-        ], answers => {
-          this.state.baseThemeVersion = answers.baseThemeVersion;
-          done();
-        })
+      if (this.state.baseTheme && this.state.baseThemeVersions.length > 0) {
+        this._selectVersions(this.async(););
       }
     },
   },
@@ -153,18 +126,7 @@ module.exports = ThemeGeneratorBase.extend({
         this._willDie('Failed to create repo.')
       );
     },
-    // setOrigin() {
-    //   if (this.state.origin) {
-    //     let done = this.async();
-    //     this._git(
-    //       'remote add -f --tags origin ' + this.state.origin,
-    //       'Adding origin repository at ' + this.state.origin,
-    //     ).then(() =>
-    //       this._git(
-    //         'checkout master'
-    //       ))
-    //   }
-    // },
+
     ensureRepo() {
       if (this.state.baseTheme) {
         let done = this.async();
@@ -225,14 +187,14 @@ module.exports = ThemeGeneratorBase.extend({
     },
     setPlaceholderTag() {
       if (this.state.baseThemeVersion) {
-        let done = this.async();
-        this._git(
-          `tag basetheme-${this.state.baseThemeVersion.version}`,
-          'Creating placeholder tag for last supported base theme version'
-        ).then(
-        () => done(),
-          this._willDie('Failed to set placeholder tag.'));
+        this._setPlaceholderTag(
+          this.async(),
+          this.state.baseThemeVersion.version
+        );
       }
+    },
+    announceComplete() {
+      this.log.success('#### Finished configuring git repository!');
     }
   },
 
@@ -241,7 +203,7 @@ module.exports = ThemeGeneratorBase.extend({
       if (this.options['skip-app']) {
         this.verbose.warning('Skipping mozu.config.json generation.')
       } else {
-        this.verbose('Setting up mozu.config.json file');
+        this.log('Setting up mozu.config.json file for sync with Dev Center');
         this.composeWith('mozu-app', {
           options: Object.assign({}, this.options, {
             composed: true,
@@ -300,6 +262,7 @@ module.exports = ThemeGeneratorBase.extend({
         author: this.user.git.name(),
         'extends': null,
         baseTheme: this.state.baseTheme,
+        baseThemeChannel: this.options.prerelease ? 'prerelease' : 'stable',
         name: `${this.state.friendlyName} v${this.state.version}`
       });
 

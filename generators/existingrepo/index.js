@@ -118,7 +118,7 @@ module.exports = ThemeGeneratorBase.extend({
           }
           this.verbose.success('Found theme.json file!')
           this.verbose(theme.about);
-          this.state.foundThemeJson = theme;
+          this.state.foundThemeJson = theme.about;
           this.state.baseTheme = this.state.foundThemeJson.baseTheme;
         }
         done();
@@ -179,28 +179,7 @@ If you believe this message is in error, then check your \`theme.json\` ` +
       this._ensureVersionsExist(this.async());
     },
     attachBaseThemeRepo() {
-      if (this.state.baseTheme) {
-        let done = this.async();
-        this._git(
-          `remote add ${BASETHEME} -t master ${this.state.baseTheme}`,
-          `Adding basetheme remote`
-        ).then(
-          () => this._git(
-            `config remote.${BASETHEME}.tagopt --no-tags`,
-            `Configuring ${BASETHEME} not to fetch tags`
-        )).then(
-          () => this._git(
-            `fetch --no-tags ${BASETHEME}`,
-            `Fetching commits from ${BASETHEME}`,
-            {
-              stdio: 'inherit', // for authentication
-              quiet: true // so it doesn't spit stdout back in verbose mode
-            }
-        )).then(
-          () => done(),
-          this._willDie('Failed to attach base theme remote.')
-        );
-      }
+      this._attachBaseThemeRepo(this.async());
     },
     testAncestry() {
       if (this.state.baseTheme) {
