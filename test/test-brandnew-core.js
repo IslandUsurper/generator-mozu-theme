@@ -43,7 +43,7 @@ test('repository created', t => {
     'basetheme remote exists'
   );
   t.equal(
-    git('tag').output.trim(), 'basetheme-8.0.0',
+    git('tag').output.trim().split('-').shift(), 'basetheme',
     'one tag exists for basetheme'
   );
   t.doesNotThrow(
