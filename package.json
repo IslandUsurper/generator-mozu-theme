@@ -22,7 +22,7 @@
     "mozu-theme"
   ],
   "dependencies": {
-    "chalk": "^1.0.0",
+    "chalk": "^1.1.1",
     "generator-mozu-app": "^1.1.0",
     "gruntfile-editor": "^1.1.0",
     "has-unicode": "^1.0.1",
@@ -37,7 +37,7 @@
     "slug": "^0.9.1",
     "strip-bom": "^2.0.0",
     "valid-url": "^1.0.9",
-    "yeoman-generator": "^0.20.3"
+    "yeoman-generator": "^0.21.1"
   },
   "devDependencies": {
     "tape": "^4.2.2"
