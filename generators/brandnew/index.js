@@ -10,6 +10,7 @@ const slug = require('slug');
 const shell = require('shelljs');
 const MozuAppGenerator = require('generator-mozu-app');
 const find = require('lodash.find');
+const GruntfileEditor = require('gruntfile-editor');
 
 const constants = require('../../constants');
 const Extending = constants.Extending;
@@ -110,9 +111,19 @@ module.exports = ThemeGeneratorBase.extend({
     },
     selectVersions() {
       if (this.state.baseTheme && this.state.baseThemeVersions.length > 0) {
-        this._selectVersions(this.async(););
+        this._selectVersions(this.async());
       }
     },
+    addSync() {
+      let done = this.async();
+      this._confirm('Add sync configuration to automatically upload ' +
+        'this theme to Mozu Developer Center?',
+        true,
+        yes => {
+          this.state.addSync = yes;
+          done();
+        });
+    }
   },
 
   configuring: {
@@ -200,7 +211,7 @@ module.exports = ThemeGeneratorBase.extend({
 
   writing: {
     addAppConfig() {
-      if (this.options['skip-app']) {
+      if (!this.state.addSync || this.options['skip-app']) {
         this.verbose.warning('Skipping mozu.config.json generation.')
       } else {
         this.log('Setting up mozu.config.json file for sync with Dev Center');
@@ -263,7 +274,7 @@ module.exports = ThemeGeneratorBase.extend({
         'extends': null,
         baseTheme: this.state.baseTheme,
         baseThemeChannel: this.options.prerelease ? 'prerelease' : 'stable',
-        name: `${this.state.friendlyName} v${this.state.version}`
+        name: this.state.friendlyName
       });
 
       fs.writeFileSync(themePath, JSON.stringify(theme, null, 2));
@@ -285,6 +296,19 @@ module.exports = ThemeGeneratorBase.extend({
         this.state.gitIgnoreModified = true;
       }
     },
+    addSyncToGruntfile() {
+      if (this.state.addSync) {
+        this.log('Editing `Gruntfile.js` to add sync tasks');
+        let taskConfig = this.fs.readJSON(this.templatePath('gruntfile-config.json'));
+        let gruntfile = new GruntfileEditor(
+          fs.readFileSync('./Gruntfile.js', 'utf8')
+        );
+        gruntfile.insertConfig('mozusync', JSON.stringify(taskConfig.mozusync, null, 2));
+        gruntfile.registerTask('default', ['mozusync:upload'])
+        fs.writeFileSync('./Gruntfile.js', gruntfile.toString(), 'utf8');
+        this.log.success('Gruntfile edits complete!');
+      }
+    },
     initialCommit() {
       let done = this.async();
       let changedFiles = 'package.json theme.json';
@@ -297,11 +321,11 @@ module.exports = ThemeGeneratorBase.extend({
       ).then(() =>
         this._git(
           ['commit', '-m', '"Initial commit"'],
-          'Committing changed package.json and theme.json files...')
+          'Committing initial changed files...')
       ).then(
         () => {
-          this.log.success('Created initial commit with package.json ' +
-                           'and theme.json. Repository is ready.');
+          this.log.success('Created initial commit with Gruntfile, ' +
+                           'package.json, and theme.json. Repository ready.');
           done();
         },
         this._willDie('Could not make initial commit.')

@@ -24,6 +24,7 @@
   "dependencies": {
     "chalk": "^1.0.0",
     "generator-mozu-app": "^1.1.0",
+    "gruntfile-editor": "^1.1.0",
     "has-unicode": "^1.0.1",
     "is-plain-object": "^2.0.1",
     "lodash.find": "^3.2.1",
