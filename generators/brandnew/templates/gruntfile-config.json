@@ -26,6 +26,7 @@
         "compiled/**/*",
         "labels/**/*",
         "resources/**/*",
+        "packageconfig.xml",
         "scripts/**/*",
         "stylesheets/**/*",
         "templates/**/*",
