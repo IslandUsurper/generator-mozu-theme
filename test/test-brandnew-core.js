@@ -59,7 +59,7 @@ test('repository created', t => {
     'description set in package.json'
   );
   t.doesNotThrow(
-    () => assert.fileContent('theme.json', /"name": "Test Brandnew™ v0.1.0/),
+    () => assert.fileContent('theme.json', /"name": "Test Brandnew™/),
     'name set in theme.json'
   );
   t.doesNotThrow(

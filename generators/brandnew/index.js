@@ -15,6 +15,7 @@ const GruntfileEditor = require('gruntfile-editor');
 const constants = require('../../constants');
 const Extending = constants.Extending;
 const CORE_THEME_URL = constants.CORE_THEME_URL;
+const NEW_THEME_MIN_CORE_VER = '~8';
 const BASETHEME = constants.BASETHEME;
 
 const THIS_GENERATOR_NAME = 
@@ -111,18 +112,8 @@ module.exports = ThemeGeneratorBase.extend({
     },
     selectVersions() {
       if (this.state.baseTheme && this.state.baseThemeVersions.length > 0) {
-        this._selectVersions(this.async());
+        this._selectVersions(this.async(), null, NEW_THEME_MIN_CORE_VER);
       }
-    },
-    addSync() {
-      let done = this.async();
-      this._confirm('Add sync configuration to automatically upload ' +
-        'this theme to Mozu Developer Center?',
-        true,
-        yes => {
-          this.state.addSync = yes;
-          done();
-        });
     }
   },
 
@@ -211,7 +202,8 @@ module.exports = ThemeGeneratorBase.extend({
 
   writing: {
     addAppConfig() {
-      if (!this.state.addSync || this.options['skip-app']) {
+      if (this.state.extending === Extending.nothing ||
+          this.options['skip-app']) {
         this.verbose.warning('Skipping mozu.config.json generation.')
       } else {
         this.log('Setting up mozu.config.json file for sync with Dev Center');
@@ -273,7 +265,10 @@ module.exports = ThemeGeneratorBase.extend({
         author: this.user.git.name(),
         'extends': null,
         baseTheme: this.state.baseTheme,
-        baseThemeChannel: this.options.prerelease ? 'prerelease' : 'stable',
+        baseThemeVersion: this.options.edge ?
+          null : this.state.baseThemeVersion,
+        baseThemeChannel: this.options.edge ? 'edge' :
+          (this.options.prerelease ? 'prerelease' : 'stable'),
         name: this.state.friendlyName
       });
 
@@ -297,39 +292,9 @@ module.exports = ThemeGeneratorBase.extend({
       }
     },
     addSyncToGruntfile() {
-      if (this.state.addSync) {
-        this.log('Editing `Gruntfile.js` to add sync tasks');
-        let taskConfig = this.fs.readJSON(this.templatePath('gruntfile-config.json'));
-        let gruntfile = new GruntfileEditor(
-          fs.readFileSync('./Gruntfile.js', 'utf8')
-        );
-        gruntfile.insertConfig('mozusync', JSON.stringify(taskConfig.mozusync, null, 2));
-        gruntfile.registerTask('default', ['mozusync:upload'])
-        fs.writeFileSync('./Gruntfile.js', gruntfile.toString(), 'utf8');
-        this.log.success('Gruntfile edits complete!');
+      if (this.extending !== Extending.nothing) {
+        this._upgradeGruntfile();
       }
-    },
-    initialCommit() {
-      let done = this.async();
-      let changedFiles = 'package.json theme.json';
-      if (this.state.gitIgnoreModified) {
-        changedFiles += ' .gitignore'
-      }
-      this._git(
-        `add ${changedFiles}`,
-        'Staging changed files'
-      ).then(() =>
-        this._git(
-          ['commit', '-m', '"Initial commit"'],
-          'Committing initial changed files...')
-      ).then(
-        () => {
-          this.log.success('Created initial commit with Gruntfile, ' +
-                           'package.json, and theme.json. Repository ready.');
-          done();
-        },
-        this._willDie('Could not make initial commit.')
-      );
     }
   },
 
@@ -344,6 +309,28 @@ module.exports = ThemeGeneratorBase.extend({
   },
 
   end: {
+    initialCommit() {
+      let done = this.async();
+      let changedFiles = 'package.json theme.json Gruntfile.js';
+      if (this.state.gitIgnoreModified) {
+        changedFiles += ' .gitignore'
+      }
+      this._git(
+        `add ${changedFiles}`,
+        'Staging changed files'
+      ).then(() =>
+      this._git(
+        ['commit', '-m', '"Initial commit"'],
+        'Committing initial changed files...')
+      ).then(
+      () => {
+        this.log.success('Created initial commit with Gruntfile, ' +
+                         'package.json, and theme.json. Repository ready.');
+                         done();
+      },
+      this._willDie('Could not make initial commit.')
+      );
+    },
     signoff() {
       this._signoff();
     }

@@ -149,7 +149,7 @@ module.exports = ThemeGeneratorBase.extend({
       if (this.state.foundThemeJson && this.state.foundThemeJson['extends']) {
         this._die(`This repository contains a legacy Mozu theme that uses ` +
                   `the deprecated "runtime extension" system. To update ` +
-                  `this repository, run \`yo ${SUBGEN_PREFIX}:upgrade\`.
+                  `this repository, run \`yo ${SUBGEN_PREFIX}:legacy\`.
 
 If you believe this message is in error, then check your \`theme.json\` ` +
                   `file and remove the \`"extends"\` property in the ` +

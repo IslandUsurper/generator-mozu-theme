@@ -12,6 +12,7 @@ const semver = require('semver');
 const validUrl = require('valid-url');
 const stripBom = require('strip-bom');
 const find = require('lodash.find');
+const GruntfileEditor = require('gruntfile-editor');
 
 const constants = require('../../constants');
 const DoUpgrade = constants.DoUpgrade;
@@ -29,6 +30,11 @@ module.exports = FancyLoggingGenerator.extend({
     this.option('prerelease', {
       desc: 'Show the option to inherit from a prerelease of the base theme.',
       alias: 'p',
+      type: Boolean
+    });
+
+    this.option('edge', {
+      desc: 'Inherit from the latest, possible unstable commit of the base.',
       type: Boolean
     });
 
@@ -218,7 +224,14 @@ module.exports = FancyLoggingGenerator.extend({
               `Check with the maintainer of ` +
                 `${chalk.cyan(this.state.baseTheme)} before continuing.`);
           } else {
-            this.verbose('Repository will be left at HEAD.');
+            this.log.warning('Your `theme.json` will be set to use the ' +
+                             '"edge" channel so it can consume untagged ' +
+                             'commits. \n\n' +
+                             'To change this later, edit your `theme.json` ' +
+                             'and change the `about.baseThemeChannel` ' +
+                             'property to say either `"stable"` or ' +
+                             '`"prerelease"`.');
+            this.state.forceEdge = true;
             done();
           }
         }
@@ -226,11 +239,16 @@ module.exports = FancyLoggingGenerator.extend({
     }
   },
 
-  _selectVersions(done, defaultVersion) {
+  _selectVersions(done, defaultVersion, allowedRange) {
     let versionChoices = this.state.baseThemeVersions.map(x => ({
       name: x.version,
       value: x
     }));
+    if (allowedRange) {
+      this.verbose('Limiting allowed versions to ' + allowedRange);
+      versionChoices = versionChoices.filter(c => 
+       semver.satisfies(c.name, allowedRange));
+    }
     if (this.options.prerelease) {
       versionChoices.unshift({
         name: 'HEAD (latest, unreleased commit)',
@@ -257,7 +275,7 @@ module.exports = FancyLoggingGenerator.extend({
         name: 'baseThemeVersion',
         message: 'Version of base theme to inherit:',
         choices: versionChoices,
-        default: preChoiceValue || versionChoices[0].value
+        default: preChoiceValue || versionChoices[0] && versionChoices[0].value
       }
     ], answers => {
       this.state.baseThemeVersion = answers.baseThemeVersion;
@@ -285,6 +303,46 @@ module.exports = FancyLoggingGenerator.extend({
     () => done(),
       this._willDie('Failed to attach base theme remote.')
     );
+  },
+
+  _upgradeGruntfile() {
+    this.log('Editing `Gruntfile.js` to add sync tasks');
+    let gruntfileConfig = require('./gruntfile-config.json');
+    let gruntfile;
+    try {
+      gruntfile = new GruntfileEditor(
+        fs.readFileSync(this.destinationPath('./Gruntfile.js'), 'utf8')
+      );
+    } catch(e) {
+      this.log.warning('Could not find Gruntfile.js to add tasks:' + e);
+    }
+    if (gruntfile) {
+      Object.keys(gruntfileConfig.configs).forEach( configName => {
+        gruntfile.insertConfig(
+          configName,
+          JSON.stringify(gruntfileConfig.configs[configName], null, 2)
+        );
+      });
+      Object.keys(gruntfileConfig.tasks).forEach( taskName => {
+        gruntfile.registerTask(
+          taskName,
+          gruntfileConfig.tasks[taskName]
+        );
+      });
+      gruntfile.loadNpmTasks(gruntfileConfig.plugins);
+      fs.writeFileSync(
+        this.destinationPath('./Gruntfile.js'), 
+        gruntfile.toString(),
+        'utf8'
+      );
+      this.npmInstall(gruntfileConfig.plugins.concat([
+        'grunt',
+        'time-grunt'
+      ]), {
+        saveDev: true
+      });
+      this.log.success('Gruntfile edits complete!');
+    }
   },
 
   _signoff() {
@@ -322,7 +380,7 @@ module.exports = FancyLoggingGenerator.extend({
       if (it.hasThemeJson) {
         let theme;
         try {
-          theme = JSON.parse(
+          theme = it.parsedThemeJson = JSON.parse(
             stripBom(
               fs.readFileSync(this.destinationPath('theme.json'), 'utf8')
             )
