@@ -581,7 +581,7 @@ module.exports = FancyLoggingGenerator.extend({
         });
         break;
       case !!it.alreadyHasBaseThemeRemote:
-        this.newline();
+        this._newline();
         this._die('A `basetheme` remote has already been attached to this ' +
                   'repository. Perhaps a previous upgrade is half-finished, ' +
                   'or it failed. Please remove this remote and continue.');
