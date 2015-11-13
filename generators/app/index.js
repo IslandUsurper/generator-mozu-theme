@@ -176,13 +176,17 @@ module.exports = FancyLoggingGenerator.extend({
       {
         quiet: true
       }
-    ).then(tags => {
+    ).then(tagsTxt => {
       let uniques = new Set();
-      this.state.baseThemeVersions = tags.trim().split('\n')
-      .map(l => {
+      let tags = tagsTxt.trim().split('\n');
+      this.verbose(`Found ${tags.length} tags in remote repository.`);
+      let versions = tags.map(l => {
         let m = l.match(/([0-9A-Fa-f]+)\trefs\/tags\/v?([^\^]+)\^\{\}/i);
         if (m) {
           let version = semver.clean(m[2]);
+          if (!version) {
+            this.verbose('Could not parse semantic version from tag ' + m[2]);
+          }
           if (!uniques.has(version)) {
             uniques.add(version);
             return {
@@ -191,12 +195,17 @@ module.exports = FancyLoggingGenerator.extend({
             };
           }
         }
-      })
-      .filter(this.options.prerelease ? 
-        x => !!x && !!x.version
-          :
-        x => !!x && !!x.version && !~x.version.indexOf('-')
-      ).sort((x, y) => semver.rcompare(x.version, y.version));
+      }).filter(x => !!x && !!x.version);
+      this.verbose(`Found ${versions.length} semantically versioned tags.`);
+      if (!this.options.prerelease) {
+        this.verbose(`Removing prerelease tags.`);
+        versions = versions.filter(x => !~x.version.indexOf('-'));
+        this.verbose(`Found ${versions.length} stable releases.`);
+      }
+
+      this.state.baseThemeVersions = versions.sort(
+        (x, y) => semver.rcompare(x.version, y.version)
+      );
 
       done();
 
@@ -352,11 +361,17 @@ module.exports = FancyLoggingGenerator.extend({
         gruntfile.toString(),
         'utf8'
       );
+      this.log(
+        'Running `npm install` to install required grunt dependencies' +
+        ' (this may take a minute)');
       this.npmInstall(gruntfileConfig.plugins.concat([
         'grunt',
         'time-grunt'
       ]), {
-        saveDev: true
+        saveDev: true,
+        stdio: this.options.verbose ? 
+          'inherit' :
+          [process.stdin, 'ignore', process.stderr]
       });
       this.log.success('Gruntfile edits complete!');
     }
@@ -557,7 +572,11 @@ module.exports = FancyLoggingGenerator.extend({
     }
   },
   _composeSubWorkflow(name, opts) {
-    this.composeWith(`${SUBGEN_PREFIX}:${name}`, {
+    let fullName = `${SUBGEN_PREFIX}:${name}`;
+    this.verbose(`Invoking subgenerator \`${name}\`. You can run this ` +
+                 `subgenerator directly with:  \`yo ${fullName}\`.\n\n`);
+    this._newline();
+    this.composeWith(fullName, {
       options: Object.assign({}, this.options, {
         composed: true,
         state: this.state
@@ -582,13 +601,13 @@ module.exports = FancyLoggingGenerator.extend({
             message: 'How shall we proceed?',
             choices: [
               {
-                name: 'Existing theme from repository',
-                value: BeginWith.repo
-              },
-              {
                 name: 'Brand new theme',
                 value: BeginWith.brandnew
               },
+              {
+                name: 'Existing theme from repository',
+                value: BeginWith.repo
+              }
             ]
           }
         ], answers => {

@@ -16,7 +16,6 @@ const constants = require('../../constants');
 const Extending = constants.Extending;
 const CORE_THEME_URL = constants.CORE_THEME_URL;
 const NEW_THEME_MIN_CORE_VER = '~8';
-const BASETHEME = constants.BASETHEME;
 
 const THIS_GENERATOR_NAME = 
   `${constants.SUBGEN_PREFIX}:${path.basename(__dirname)}`;
@@ -141,24 +140,24 @@ module.exports = ThemeGeneratorBase.extend({
       if (this.state.baseTheme) {
         let done = this.async();
         this._git(
-          `remote add ${BASETHEME} -t master ${this.state.baseTheme}`,
+          `remote add basetheme ${this.state.baseTheme}`,
           `Adding basetheme remote`
         ).then(
           () => this._git(
-            `config remote.${BASETHEME}.tagopt --no-tags`,
-            `Configuring ${BASETHEME} not to fetch tags`
+            `config remote.basetheme.tagopt --no-tags`,
+            `Configuring basetheme not to fetch tags`
         )).then(
           () => this._git(
-            `fetch --no-tags ${BASETHEME}`,
-            `Fetching commits from ${BASETHEME}`,
+            `fetch --no-tags basetheme`,
+            `Fetching commits from basetheme`,
             {
               stdio: 'inherit', // for authentication
               quiet: true // so it doesn't spit stdout back in verbose mode
             }
         )).then(
           () => this._git(
-            `branch --no-track master ${BASETHEME}/master`,
-            `Basing master branch on ${BASETHEME}/master`
+            `branch --no-track master basetheme/master`,
+            `Basing master branch on basetheme/master`
         )).then(
           () => done(),
           this._willDie('Failed to attach base theme remote.')
@@ -317,9 +316,14 @@ module.exports = ThemeGeneratorBase.extend({
   install: {
     inst() {
       if (this.options['skip-install'] || !this.state.baseTheme) {
-        this.verbose.warning('Skipping `npm install`.')
+        this.verbose.warning('Skipping `npm install`.');
       } else {
-        this.npmInstall();
+        this.log('Running `npm install` (this may take a minute)');
+        this.npmInstall([], {
+          stdio: this.options.verbose ? 
+            'inherit' :
+            [process.stdin, 'ignore', process.stderr]
+        });
       }
     }
   },
