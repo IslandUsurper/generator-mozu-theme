@@ -232,6 +232,11 @@ module.exports = FancyLoggingGenerator.extend({
                              'property to say either `"stable"` or ' +
                              '`"prerelease"`.');
             this.state.forceEdge = true;
+            this.state.baseThemeChannel = 'edge';
+            this.state.baseThemeVersion = {
+              commit: 'HEAD',
+              version: 'HEAD'
+            };
             done();
           }
         }
@@ -249,7 +254,7 @@ module.exports = FancyLoggingGenerator.extend({
       versionChoices = versionChoices.filter(c => 
        semver.satisfies(c.name, allowedRange));
     }
-    if (this.options.prerelease) {
+    if (this.options.edge) {
       versionChoices.unshift({
         name: 'HEAD (latest, unreleased commit)',
         value: {

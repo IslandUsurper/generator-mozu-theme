@@ -103,16 +103,26 @@ module.exports = ThemeGeneratorBase.extend({
       this._promptForBaseTheme(this.async());
     },
     fetchBaseThemeTags() {
-      if (this.state.baseTheme) {
+      if (this.state.baseTheme && !this.options.edge) {
         this._fetchBaseThemeTags(this.async());
       }
     },
     ensureVersionsExist() {
-      this._ensureVersionsExist(this.async());
+      if (!this.options.edge) {
+        this._ensureVersionsExist(this.async());
+      }
     },
     selectVersions() {
-      if (this.state.baseTheme && this.state.baseThemeVersions.length > 0) {
-        this._selectVersions(this.async(), null, NEW_THEME_MIN_CORE_VER);
+      if (
+        !this.state.forceEdge &&
+        !this.options.edge &&
+        this.state.baseTheme &&
+        this.state.baseThemeVersions.length > 0
+      ) {
+        this._selectVersions(
+          this.async(),
+          null,
+          this.state.extending === Extending.core && NEW_THEME_MIN_CORE_VER);
       }
     }
   },
