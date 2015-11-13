@@ -205,7 +205,19 @@ module.exports = FancyLoggingGenerator.extend({
   },
 
   _ensureVersionsExist(done) {
-    if (!this.state.baseTheme || this.state.baseThemeVersions.length > 0) {
+    if (this.options.edge) {
+      this.verbose('Used --edge flag; skipping versions download. Version ' +
+                   'will be HEAD.');
+      this.state.baseThemeChannel = 'edge';
+      this.state.baseThemeVersion = {
+        commit: 'HEAD',
+        version: 'HEAD'
+      };
+      done();
+    } else if (
+      !this.state.baseTheme ||
+      this.state.baseThemeVersions.length > 0
+    ) {
       done();
     } else {
       this.log.warning(

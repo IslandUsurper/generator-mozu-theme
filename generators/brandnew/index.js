@@ -108,9 +108,7 @@ module.exports = ThemeGeneratorBase.extend({
       }
     },
     ensureVersionsExist() {
-      if (!this.options.edge) {
-        this._ensureVersionsExist(this.async());
-      }
+      this._ensureVersionsExist(this.async());
     },
     selectVersions() {
       if (
@@ -182,20 +180,28 @@ module.exports = ThemeGeneratorBase.extend({
         );
       }
     },
-    resetToVersion() {
-      if (this.state.baseThemeVersion) {
-        let done = this.async();
-        this._git(
-          `reset --hard ${this.state.baseThemeVersion.commit}`,
-          `Resetting to the commit at ${this.state.baseThemeVersion.version}`
-        )
-        .catch(this._willDie('Failed to set to version.'))
-        .then(() => {
-          this.verbose.success('Set working directory to ' +
-                              this.state.baseThemeVersion.version);
-          done();
-        });
+    ensureBaseThemeVersion() {
+      if (
+        !this.state.baseThemeVersion &&
+        this.state.extending !== Extending.nothing
+      ) {
+        this._die('No base theme version was specified or found. Please ' +
+                  'report this issue to Mozu Support.');
       }
+    },
+    resetToVersion() {
+      let done = this.async();
+      this._git(
+        `reset --hard ${this.state.baseThemeVersion.commit}`,
+        `Resetting to the commit at ${this.state.baseThemeVersion.version}`
+      )
+      .catch(this._willDie('Failed to set to version.'))
+      .then(() => {
+        this.verbose.success('Set working directory to ' +
+          this.state.baseThemeVersion.version
+        );
+        done();
+      });
     },
     setPlaceholderTag() {
       if (this.state.baseThemeVersion) {
