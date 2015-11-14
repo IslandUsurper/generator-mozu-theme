@@ -90,6 +90,7 @@ module.exports = ThemeGeneratorBase.extend({
       let it = this.state;
       if (!this.state.skipPrompts) {
         let done = this.async();
+        this._newline();
         let choices =[
           {
             name: chalk.bold('Upgrade') + ' my Gruntfile in place',
@@ -172,7 +173,7 @@ module.exports = ThemeGeneratorBase.extend({
       try {
         this.state.labelsFilesToMerge = fs.readdirSync(
           this.destinationPath('labels')
-        );
+        ).filter(v => path.extname(x) === ".json");
       } catch(e) {
         this.verbose.warning('Could not find any labels files.');
       }
@@ -288,6 +289,12 @@ module.exports = ThemeGeneratorBase.extend({
           ).then(
             () => {
               this._upgradeGruntfile();
+              this.verbose('Installing known dependencies for Core Gruntfile');
+              this.npmInstall([
+                'grunt-bower-task',
+                'grunt-contrib-jshint',
+                'grunt-contrib-watch'
+              ])
               done();
             }
           ).catch(this._willDie('Failed to add new utilities to Gruntfile.'))
