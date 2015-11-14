@@ -268,7 +268,7 @@ module.exports = FancyLoggingGenerator.extend({
   _selectVersions(done, defaultVersion, allowedRange) {
     let versionChoices = this.state.baseThemeVersions.map(x => ({
       name: x.version,
-      value: x
+      value: x.version
     }));
     if (allowedRange) {
       this.verbose('Limiting allowed versions to ' + allowedRange);
@@ -278,18 +278,15 @@ module.exports = FancyLoggingGenerator.extend({
     if (this.options.edge) {
       versionChoices.unshift({
         name: 'HEAD (latest, unreleased commit)',
-        value: {
-          commit: 'HEAD',
-          version: 'HEAD'
-        }
+        value: 'HEAD'
       });
     }
     let preChoiceValue;
     let preChoice = defaultVersion &&
-        find(versionChoices, c =>
-             c.value.version === defaultVersion);
+        find(versionChoices, c => c.value === defaultVersion);
     if (preChoice) {
       preChoiceValue = preChoice.value;
+      this.verbose(`Defaulting to version: ${preChoiceValue}`);
     } else if (defaultVersion) {
       this.log.warning(`Chose version ${defaultVersion}, but it was ` +
                        `not found.`);
@@ -301,10 +298,21 @@ module.exports = FancyLoggingGenerator.extend({
         name: 'baseThemeVersion',
         message: 'Version of base theme to inherit:',
         choices: versionChoices,
-        default: preChoiceValue || versionChoices[0] && versionChoices[0].value
+        default: preChoiceValue ||
+          (versionChoices[0] && versionChoices[0].value)
       }
     ], answers => {
-      this.state.baseThemeVersion = answers.baseThemeVersion;
+      if (answers.baseThemeVersion === 'HEAD') {
+        this.state.baseThemeVersion = {
+          commit: 'HEAD',
+          version: 'HEAD'
+        };
+      } else {
+        this.state.baseThemeVersion = find(
+          this.state.baseThemeVersions,
+          v => v.version === answers.baseThemeVersion
+        );
+      }
       done();
     })
   },
