@@ -15,7 +15,6 @@ const GruntfileEditor = require('gruntfile-editor');
 const constants = require('../../constants');
 const Extending = constants.Extending;
 const CORE_THEME_URL = constants.CORE_THEME_URL;
-const NEW_THEME_MIN_CORE_VER = '~8';
 
 const THIS_GENERATOR_NAME = 
   `${constants.SUBGEN_PREFIX}:${path.basename(__dirname)}`;
@@ -116,10 +115,21 @@ module.exports = ThemeGeneratorBase.extend({
         this.state.baseTheme &&
         this.state.baseThemeVersions.length > 0
       ) {
+        let minVer;
+        if (this.state.extending === Extending.core) {
+          let minStableMajor =
+            Math.max.apply(Math, 
+              this.state.baseThemeVersions
+               .filter(x => x.version.indexOf('-') === -1)
+               .map(x => semver.major(x.version))
+            );
+          if (minStableMajor) minVer = ">=" + minStableMajor;
+        }
         this._selectVersions(
           this.async(),
           null,
-          this.state.extending === Extending.core && NEW_THEME_MIN_CORE_VER);
+          minVer
+        );
       }
     }
   },
