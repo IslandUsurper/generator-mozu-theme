@@ -284,8 +284,8 @@ module.exports = ThemeGeneratorBase.extend({
         default:
           let done = this.async();
           this._git(
-            `checkout MERGE_HEAD Gruntfile.js`,
-            `Getting the base theme Gruntfile`
+            `checkout basetheme/master Gruntfile.js`,
+            `Getting the base theme upgraded Gruntfile`
           ).then(
             () => {
               this._upgradeGruntfile();
