@@ -13,6 +13,7 @@ const validUrl = require('valid-url');
 const stripBom = require('strip-bom');
 const find = require('lodash.find');
 const GruntfileEditor = require('gruntfile-editor');
+const mozuThemeHelpers = require('mozu-theme-helpers');
 
 const constants = require('../../constants');
 const DoUpgrade = constants.DoUpgrade;
@@ -762,8 +763,22 @@ module.exports = FancyLoggingGenerator.extend({
         break;
       case it.hasThemeJson &&
            !it.runtimeExtends && !it.alreadyHasBaseThemeRemote:
-        this._die('reattachbase not implemented, hoss');
-        // this._composeSubWorkflow('reattachbase');
+        this._newline();
+        this.log.warning(
+          'This directory is a Mozu theme that uses the modern, Git-based ' +
+          'inheritance system, but it does not have a `basetheme` remote ' +
+          'configured. Reattaching...'
+        );
+        this._newline();
+        let job = mozuThemeHelpers('check', { dir: this.destinationPath() });
+        let done = this.async();
+        job.on('info', s => this.log(s, { markdown: false }));
+        job.on('warn', s => this.log(s, { markdown: false }));
+        job.on('error', e => this._die(e));
+        job.on('done', () => {
+          this.log.success('Base theme reattached.');
+          done();
+        });
         break;
       default:
         this.log.fatal('Encountered a directory state that there is not ' +

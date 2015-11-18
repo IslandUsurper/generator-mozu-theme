@@ -29,6 +29,7 @@
     "marked": "^0.3.5",
     "marked-terminal": "^1.6.1",
     "mosay": "*",
+    "mozu-theme-helpers": "^1.2.1",
     "prettyjson": "^1.1.3",
     "semver": "^5.0.3",
     "shelljs": "^0.5.3",
