@@ -186,7 +186,12 @@ module.exports = ThemeGeneratorBase.extend({
           `Creating repository in \`${process.cwd()}\`...`
         ).then(
           () => this._git(
-            'commit -am "initial legacy commit"',
+            'add -A .',
+            'Adding all files in directory (respecting .gitignore if present)'
+          )
+        ).then(
+          () => this._git(
+            ['commit', '-m', 'initial legacy commit'],
             'Creating initial commit to merge onto'
           )
         ).then(
