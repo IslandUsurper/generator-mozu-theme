@@ -173,7 +173,7 @@ module.exports = ThemeGeneratorBase.extend({
       try {
         this.state.labelsFilesToMerge = fs.readdirSync(
           this.destinationPath('labels')
-        ).filter(v => path.extname(x) === ".json");
+        ).filter(v => path.extname(v) === ".json");
       } catch(e) {
         this.verbose.warning('Could not find any labels files.');
       }
