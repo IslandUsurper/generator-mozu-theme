@@ -364,19 +364,28 @@ module.exports = FancyLoggingGenerator.extend({
           gruntfileConfig.tasks[taskName]
         );
       });
-      gruntfile.loadNpmTasks(gruntfileConfig.plugins);
+      let existingTaskLoads =
+        gruntfile.toString().split('\n')
+          .map(x => {
+            let m = x.match(/grunt\.loadNpmTasks\(['"`]([^'"`]+)['"`]\)/);
+            return m && m[1];
+          })
+          .filter(x => !!x);
+      gruntfileConfig.tasksToLoad.forEach(task => {
+        if (!~existingTaskLoads.indexOf(task)) {
+          gruntfile.loadNpmTasks(task);
+        }
+      });
       fs.writeFileSync(
         this.destinationPath('./Gruntfile.js'), 
         gruntfile.toString(),
         'utf8'
       );
       this.log(
-        'Running `npm install` to install required grunt dependencies' +
-        ' (this may take a minute)');
-      this.npmInstall(gruntfileConfig.plugins.concat([
-        'grunt',
-        'time-grunt'
-      ]), {
+        'Running `npm install` for required grunt dependencies' +
+        ' (this may take a minute)'
+      );
+      this.npmInstall(gruntfileConfig.requiredPackages, {
         saveDev: true,
         stdio: this.options.verbose ? 
           'inherit' :

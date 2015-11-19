@@ -101,7 +101,7 @@ module.exports = ThemeGeneratorBase.extend({
             value: GruntfileChoice.keep
           }
         ] 
-        if (this.state.extending === Extending.core) {
+        if (it.runtimeExtendsCore) {
           choices.unshift({
             name: chalk.bold('Overwrite') + ' with an upgraded Gruntfile',
             value: GruntfileChoice.overwrite
@@ -148,7 +148,8 @@ module.exports = ThemeGeneratorBase.extend({
       } else {
         this.verbose('Prompts skipped, so defaulting to trying to upgrade ' +
                      'Gruntfile.');
-        it.gruntfileChoice = GruntfileChoice.upgrade;
+        it.gruntfileChoice = it.runtimeExtendsCore ? 
+          GruntfileChoice.overwrite : GruntfileChoice.upgrade;
       }
     }
   },
@@ -294,12 +295,6 @@ module.exports = ThemeGeneratorBase.extend({
           ).then(
             () => {
               this._upgradeGruntfile();
-              this.verbose('Installing known dependencies for Core Gruntfile');
-              this.npmInstall([
-                'grunt-bower-task',
-                'grunt-contrib-jshint',
-                'grunt-contrib-watch'
-              ])
               done();
             }
           ).catch(this._willDie('Failed to add new utilities to Gruntfile.'))

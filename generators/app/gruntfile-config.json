@@ -106,9 +106,19 @@
       "mozutheme:check"
     ]
   },
-  "plugins": [
+  "tasksToLoad": [
     "grunt-mozu-appdev-sync",
     "grunt-contrib-watch",
     "mozu-theme-helpers"
+  ],
+  "requiredPackages": [
+    "grunt",
+    "grunt-contrib-copy",
+    "grunt-contrib-compress",
+    "grunt-contrib-jshint",
+    "grunt-contrib-watch",
+    "mozu-theme-helpers",
+    "time-grunt",
+    "grunt-mozu-appdev-sync"
   ]
 }
