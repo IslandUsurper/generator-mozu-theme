@@ -44,7 +44,7 @@ test('empty repository created', t => {
     'no tags in empty repo'
   );
   t.doesNotThrow(
-    () => assert.fileContent('package.json', /"name": "test-brandnewtm"/),
+    () => assert.fileContent('package.json', /"name": "test-brandnew"/),
     'slug set in package.json'
   );
   t.doesNotThrow(

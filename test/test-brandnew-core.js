@@ -47,7 +47,7 @@ test('repository created', t => {
     'one tag exists for basetheme'
   );
   t.doesNotThrow(
-    () => assert.fileContent('package.json', /"name": "test-brandnewtm"/),
+    () => assert.fileContent('package.json', /"name": "test-brandnew"/),
     'slug set in package.json'
   );
   t.doesNotThrow(

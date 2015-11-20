@@ -7,7 +7,7 @@ const chalk = require('chalk');
 const semver = require('semver');
 const validUrl = require('valid-url');
 const ThemeGeneratorBase = require('../app/');
-const slug = require('slug');
+const slug = require('../../tiny-slug');
 const shell = require('shelljs');
 const MozuAppGenerator = require('generator-mozu-app');
 
