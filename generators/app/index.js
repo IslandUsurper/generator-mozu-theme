@@ -340,7 +340,8 @@ module.exports = FancyLoggingGenerator.extend({
     );
   },
 
-  _upgradeGruntfile() {
+  _upgradeGruntfile(opts) {
+    opts = opts || {};
     this.log('Editing `Gruntfile.js` to add sync tasks');
     let gruntfileConfig = require('./gruntfile-config.json');
     let gruntfile;
@@ -352,23 +353,33 @@ module.exports = FancyLoggingGenerator.extend({
       this.log.warning('Could not find Gruntfile.js to add tasks:' + e);
     }
     if (gruntfile) {
-      Object.keys(gruntfileConfig.tasks).forEach( taskName => {
-        gruntfile.registerTask(
-          taskName,
-          gruntfileConfig.tasks[taskName]
-        );
-      });
-      let existingTaskLoads =
-        gruntfile.toString().split('\n')
+      if (!opts.addTasksOnly) {
+        Object.keys(gruntfileConfig.configs).forEach(configName => {
+          gruntfile.insertConfig(
+            configName,
+            JSON.stringify(gruntfileConfig.configs[configName], null, 2)
+          );
+        });
+        let existingTaskLoads =
+          gruntfile.toString().split('\n')
           .map(x => {
             let m = x.match(/grunt\.loadNpmTasks\(['"`]([^'"`]+)['"`]\)/);
             return m && m[1];
           })
           .filter(x => !!x);
-      gruntfileConfig.tasksToLoad.forEach(task => {
-        if (!~existingTaskLoads.indexOf(task)) {
-          gruntfile.loadNpmTasks(task);
-        }
+          gruntfileConfig.tasksToLoad.forEach(task => {
+            if (!~existingTaskLoads.indexOf(task)) {
+              gruntfile.loadNpmTasks(task);
+            }
+          });
+      } else {
+        this.verbose('Only activating existing tasks, not adding new config.');
+      }
+      Object.keys(gruntfileConfig.tasks).forEach( taskName => {
+        gruntfile.registerTask(
+          taskName,
+          gruntfileConfig.tasks[taskName]
+        );
       });
       fs.writeFileSync(
         this.destinationPath('./Gruntfile.js'), 
