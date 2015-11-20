@@ -199,18 +199,20 @@ module.exports = ThemeGeneratorBase.extend({
       }
     },
     resetToVersion() {
-      let done = this.async();
-      this._git(
-        `reset --hard ${this.state.baseThemeVersion.commit}`,
-        `Resetting to the commit at ${this.state.baseThemeVersion.version}`
-      )
-      .catch(this._willDie('Failed to set to version.'))
-      .then(() => {
-        this.verbose.success('Set working directory to ' +
-          this.state.baseThemeVersion.version
-        );
-        done();
-      });
+      if (this.state.extending !== Extending.nothing) {
+        let done = this.async();
+        this._git(
+          `reset --hard ${this.state.baseThemeVersion.commit}`,
+          `Resetting to the commit at ${this.state.baseThemeVersion.version}`
+        )
+        .catch(this._willDie('Failed to set to version.'))
+        .then(() => {
+          this.verbose.success('Set working directory to ' +
+           this.state.baseThemeVersion.version
+          );
+          done();
+        });
+      }
     },
     setPlaceholderTag() {
       if (this.state.baseThemeVersion) {
