@@ -23,7 +23,7 @@ function mergeArraysOnUniqueProp(key, target, source, prop) {
 
 module.exports = {
   mergeThemeJson: function(target, source) {
-    target.settings = assign(target.settings || {}, source.settings);
+    target.settings = assign({}, source.settings, target.settings);
     [
       'editors',
       'emailTemplates',
