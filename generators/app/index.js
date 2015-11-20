@@ -352,12 +352,6 @@ module.exports = FancyLoggingGenerator.extend({
       this.log.warning('Could not find Gruntfile.js to add tasks:' + e);
     }
     if (gruntfile) {
-      Object.keys(gruntfileConfig.configs).forEach( configName => {
-        gruntfile.insertConfig(
-          configName,
-          JSON.stringify(gruntfileConfig.configs[configName], null, 2)
-        );
-      });
       Object.keys(gruntfileConfig.tasks).forEach( taskName => {
         gruntfile.registerTask(
           taskName,
