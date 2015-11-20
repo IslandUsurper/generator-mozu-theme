@@ -276,6 +276,35 @@ module.exports = ThemeGeneratorBase.extend({
         }
       );
     },
+    addAppConfig() {
+      try {
+        fs.readFileSync(this.destinationPath('mozu.config.json'));
+      } catch(e) {
+        let done = this.async();
+        this.log.warning(
+          'No `mozu.config.json` environment configuration detected, so you ' +
+          'will be unable to sync with Developer Center as part of your ' +
+          '`grunt` build.'
+        );
+        this._confirm(
+          'Create a mozu.config.json now?',
+          true,
+          yes => {
+            if (yes) {
+              this.composeWith('mozu-app', {
+                options: Object.assign({}, this.options, {
+                  composed: true,
+                  config: true,
+                })
+              }, {
+                local: require.resolve('generator-mozu-app')
+              });
+            }
+            done();
+          }
+        );
+      }
+    },
     handleGruntfileChoice() {
       switch(this.state.gruntfileChoice) {
         case GruntfileChoice.keep:
@@ -291,7 +320,7 @@ module.exports = ThemeGeneratorBase.extend({
             `Getting the base theme upgraded Gruntfile`
           ).then(
             () => {
-              this._upgradeGruntfile();
+              this._upgradeGruntfile({ addTasksOnly: true });
               done();
             }
           ).catch(this._willDie('Failed to add new utilities to Gruntfile.'))
@@ -318,7 +347,7 @@ module.exports = ThemeGeneratorBase.extend({
             return job;
           }
           return job.then(() => this._git(
-            `show MERGE_HEAD:labels/${file}`,
+            `show ${it.baseThemeVersion.commit}:labels/${file}`,
             `Getting base theme labels file ${file}`,
             {
               quiet: true
@@ -353,7 +382,7 @@ module.exports = ThemeGeneratorBase.extend({
       this.log('Merging theme.json.');
       let done = this.async();
       this._git(
-        'show MERGE_HEAD:theme.json',
+        `show ${this.state.baseThemeVersion.commit}:theme.json`,
         'Getting base theme version of theme.json',
         {
           quiet: true
