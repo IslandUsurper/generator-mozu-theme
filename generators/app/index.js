@@ -350,7 +350,9 @@ module.exports = FancyLoggingGenerator.extend({
         fs.readFileSync(this.destinationPath('./Gruntfile.js'), 'utf8')
       );
     } catch(e) {
-      this.log.warning('Could not find Gruntfile.js to add tasks:' + e);
+      this.verbose.warning('Could not find Gruntfile.js to add tasks: ' + e);
+      this.log('Creating brand new gruntfile');
+      gruntfile = new GruntfileEditor();
     }
     if (gruntfile) {
       if (!opts.addTasksOnly) {
