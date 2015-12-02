@@ -11,7 +11,9 @@
     "url": "https://github.com/zetlen"
   },
   "scripts": {
-    "test": "tape ./test/*.js"
+    "test": "tape ./test/*.js | tap-spec",
+    "depcheck": "dependency-check . --entry generators/**/* --entry test/*",
+    "preversion": "npm run depcheck && npm run test"
   },
   "keywords": [
     "yeoman-generator",
@@ -39,6 +41,8 @@
     "yeoman-generator": "^0.21.1"
   },
   "devDependencies": {
+    "dependency-check": "^2.5.1",
+    "tap-spec": "^4.1.1",
     "tape": "^4.2.2"
   },
   "engines": {
