@@ -1,51 +1,56 @@
 {
   "configs": {
     "watch": {
+      "gruntfile": {
+        "files": [
+          "Gruntfile.js"
+        ],
+        "tasks": [
+          "newer:jshint:develop"
+        ]
+      },
       "json": {
         "files": [
           "theme.json",
           "theme-ui.json",
-          "labels/**/*.json"
+          "labels/*.json"
         ],
         "tasks": [
-          "jshint"
-        ],
-        "options": {
-          "spawn": false
-        }
+          "newer:jshint:develop",
+          "newer:mozusync:upload"
+        ]
       },
       "javascript": {
         "files": [
           "scripts/**/*.js"
         ],
         "tasks": [
-          "default"
-        ],
-        "options": {
-          "spawn": false
-        }
+          "newer:jshint:develop",
+          "mozutheme:quickcompile",
+          "newer:mozusync:upload"
+        ]
       },
       "sync": {
-        "files": "<%= mozusync.upload.src %>",
+        "files": [
+          "admin/**/*",
+          "resources/**/*",
+          "packageconfig.xml",
+          "stylesheets/**/*",
+          "templates/**/*",
+          "*thumb.png",
+          "*thumb.jpg",
+          "!*.orig",
+          "!.inherited"
+        ],
         "tasks": [
-          "mozusync:upload"
+          "newer:mozusync:upload"
         ]
       }
     },
     "mozusync": {
       "options": {
         "applicationKey": "<%= mozuconfig.workingApplicationKey %>",
-        "context": "<%= mozuconfig %>",
-        "watchAdapters": [
-          {
-            "src": "mozusync.upload.src",
-            "action": "upload"
-          },
-          {
-            "src": "mozusync.del.remove",
-            "action": "delete"
-          }
-        ]
+        "context": "<%= mozuconfig %>"
       },
       "upload": {
         "options": {
@@ -67,15 +72,13 @@
           "theme-ui.json",
           "!*.orig",
           "!.inherited"
-        ],
-        "filter": "isFile"
+        ]
       },
       "del": {
         "options": {
           "action": "delete"
         },
         "src": "<%= mozusync.upload.src %>",
-        "filter": "isFile",
         "remove": []
       },
       "wipe": {
@@ -107,6 +110,8 @@
     ]
   },
   "tasksToLoad": [
+    "grunt-contrib-jshint",
+    "grunt-newer",
     "grunt-mozu-appdev-sync",
     "grunt-contrib-watch",
     "mozu-theme-helpers"
@@ -117,6 +122,7 @@
     "grunt-contrib-compress",
     "grunt-contrib-jshint",
     "grunt-contrib-watch",
+    "grunt-newer",
     "mozu-theme-helpers",
     "time-grunt",
     "grunt-mozu-appdev-sync"
