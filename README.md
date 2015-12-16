@@ -59,7 +59,7 @@ npm install -g yo
 Yeoman looks for globally installed NPM packages that identify themselves as Yeoman generators. So install the generator globally. Also, install the `grunt-cli` command line Grunt package, because you'll need it.
 
 ```bash
-npm install -g generator-mozu-theme2 grunt-cli
+npm install -g generator-mozu-theme grunt-cli
 ```
 
 ### Simplest Usage
@@ -67,7 +67,7 @@ npm install -g generator-mozu-theme2 grunt-cli
 The generator is designed to read the current directory and guess what you want it to do. It should work if you run it inside a blank directory, an existing "legacy" theme, or an existing "modern" theme. It should also fail informatively if you run it in a nonempty directory that it does not recognize as a Mozu Theme. The simple command is:
 
 ```sh
-yo mozu-theme2
+yo mozu-theme
 ```
 
 The generator will initiate the appropriate sub-generator after reading directory state.
@@ -78,18 +78,18 @@ The generator is composed of sub-generators, which you can also call directly.
 
 #### Creating a Brand New Theme
 
-Run `yo mozu-theme2:brandnew` in an empty directory to immediately begin creating a new theme. This command will fail in a nonempty directory.
+Run `yo mozu-theme:brandnew` in an empty directory to immediately begin creating a new theme. This command will fail in a nonempty directory.
 
 #### Upgrading a Legacy Theme
 
-Run `yo mozu-theme2:legacy` in the directory of an existing theme which uses the `extends` runtime inheritance model to immediately begin upgrading it to use the new process.
+Run `yo mozu-theme:legacy` in the directory of an existing theme which uses the `extends` runtime inheritance model to immediately begin upgrading it to use the new process.
 
 #### Cloning and Attaching an Existing Theme
 
-Run `yo mozu-theme2:existingrepo` and give it the address of an existing Git repository that contains a modern theme (one that has already been generated with this generator). This sub-generator will "reattach" the `basetheme` repo that helps you check for updates during the build process.
+Run `yo mozu-theme:existingrepo` and give it the address of an existing Git repository that contains a modern theme (one that has already been generated with this generator). This sub-generator will "reattach" the `basetheme` repo that helps you check for updates during the build process.
 
 ### Options
-The `yo mozu-theme2` command takes some options at the command line.
+The `yo mozu-theme` command takes some options at the command line.
 
  - `--verbose` to print very detailed logging
  - `--skip-prompts` to infer as many things as possible without pausing to ask questions
