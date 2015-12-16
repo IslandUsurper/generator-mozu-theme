@@ -2,18 +2,20 @@
   "name": "generator-mozu-theme2",
   "version": "1.1.12",
   "description": "Yeoman generator for creating Mozu Themes",
-  "license": "MIT",
   "main": "generators/app/index.js",
-  "repository": "zetlen/generator-mozu-theme2",
+  "repository": "mozu/generator-mozu-theme",
   "author": {
     "name": "James Zetlen",
-    "email": "zetlen@gmail.com",
-    "url": "https://github.com/zetlen"
+    "email": "james_zetlen@volusion.com"
   },
   "scripts": {
-    "test": "tape ./test/*.js | tap-spec",
-    "depcheck": "dependency-check . --entry generators/**/* --entry test/*",
-    "preversion": "npm run depcheck && npm run test"
+    "ci-build": "npm test",
+    "ci-build-stable": "npm run ci-build",
+    "postci-build-stable": "mozu-validate-npm-package",
+    "prepublish": "npm run ci-build-stable",
+    "test": "tape ./test/*.js",
+    "cov": "istanbul cover ./test/*.js",
+    "spec": "npm test | tap-spec"
   },
   "keywords": [
     "yeoman-generator",
@@ -41,11 +43,13 @@
     "yeoman-generator": "^0.21.1"
   },
   "devDependencies": {
-    "dependency-check": "^2.5.1",
+    "istanbul": "^0.4.1",
+    "mozu-validate-npm-package": "^1.0.0",
     "tap-spec": "^4.1.1",
     "tape": "^4.2.2"
   },
   "engines": {
     "node": "^4.1.2"
-  }
+  },
+  "license": "MIT"
 }
