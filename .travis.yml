@@ -1,6 +1,14 @@
-sudo: false
 language: node_js
+os:
+  - linux
+sudo: false
 node_js:
-  - 'iojs'
-  - '0.12'
-  - '0.10'
+  - "stable"
+  - "4.2"
+  - "4.1"
+  - "4.0"
+  - "0.12"
+script:
+- npm run ci-build
+before_script:
+- npm install
