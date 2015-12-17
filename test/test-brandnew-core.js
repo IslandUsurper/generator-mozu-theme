@@ -27,7 +27,11 @@ test('setup', t =>
     version: '0.1.0',
     extending: Extending.core
   }).on('end',t.end).on('error',e => {
-    t.fail(`${e.message}: \n ${e.stack}`);
+    if (typeof e === "string") {
+      t.fail(e);
+    } else {
+      t.fail(`${e.message}: \n ${e.stack}`);
+    }
   })
 );
 
