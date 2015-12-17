@@ -77,6 +77,14 @@ module.exports = FancyLoggingGenerator.extend({
           encoding: 'utf8',
         }, options);
         let quiet = opts.quiet;
+        // handle CI environments that don't tolerate stderr
+        if (
+          process.env.CI &&
+          (opts.stdio === 'inherit' ||
+           Array.isArray(opts.stdio) && opts.stdio[2] !== 'ignore')
+        ) {
+          opts.stdio = [0,1,'ignore'];
+        }
         delete opts.quiet; // in case that option ever affects node
         let proc = childProcess.spawn(
           'git',
