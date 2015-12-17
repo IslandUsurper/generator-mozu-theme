@@ -11,3 +11,5 @@ script:
 - npm run ci-build
 before_script:
 - npm install
+- git config --global user.email "travis-ci-build@volusion.com"
+- git config --global user.name "Travis CI Build"
