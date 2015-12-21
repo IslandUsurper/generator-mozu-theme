@@ -25,7 +25,8 @@ deploy:
   email: zetlen@gmail.com
   api_key:
     secure: YRsTQbwUti6I+FXyPBFA60AOEHuLlmMWKdjoDzPtMjbBwRDkB7eaXQpGg0J139uxlaaCnL5WhWIZMWDkn0p16Y01eUGVugSSvKzWcgMVHdQ7FqCdnb3BGUi5+zdeRK9ok9VfTEpBm7eGs70x8WUTBekfU9aG0yvgFrQYJ8KKyNKUk5swOEMk2SijT4oejzzh4max3OqmImAMBDDy71AN6y8ySBSrXX8tv29WYP27mK0WBFovZUpGJltXq8Ybmqr4nblh0acLWpBL45O3g0jmKlaJRudNIUPYSTwuVRPunFsaAxdRnbPt+rwJHZbKJ0vnQnd6m5FtProzWnAOhFCtkF+qMYhozQW6bRWd+aRzFFWm5IO1qH0kU/8WTHjX6igZZbSyQwbJT4u66O2BFZhBU6OyH2lOF1MDr9dZDR2YO2o51UucF4u5CHuRW4VQgtG7HcZPEwl/yObgm1bt6Yg1HP3e/s6WCofES133u/QQI9r6xweH4crivW7yFVhrOYWzi+e9I3B/bMFK46jPjmop6v6nzcVRdInE5WDDa0MPD/uFpuqPXSoqVvlVRCPFRwpjRNunDxHUFk5Bk/45SPdKBiUVhODxHk5jKA80j4fgNPcFjxJReRLsGrNrIsEwnU/ibABiipol3yKCpB18LbrCfSGzaYslWkFB3ASw1OpVGs4=
+  skip_cleanup: true
   on:
     tags: true
     all_branches: true
-    repo: Mozu/generator-mozu-theme
+    condition: $TRAVIS_NODE_VERSION = "stable" -a $TRAVIS_OS_NAME = "darwin"
