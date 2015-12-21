@@ -4,13 +4,13 @@ os:
 - osx
 sudo: false
 node_js:
-- stable
+- 'stable'
 - '4.2'
 - '4.1'
 script:
 - if [ -n "TRAVIS_TAG" ]; then npm run ci-build-stable; else npm run ci-build; fi
 before_script:
-- [[ $TRAVIS_OS_NAME == "darwin" ]] && rm -rf ~/.nvm && git clone https://github.com/creationix/nvm.git ~/.nvm && (cd ~/.nvm && git checkout `git describe --abbrev=0 --tags`) && source ~/.nvm/nvm.sh && nvm install $TRAVIS_NODE_VERSION
+- if [ $TRAVIS_OS_NAME == "darwin" ]; then rm -rf ~/.nvm && git clone https://github.com/creationix/nvm.git ~/.nvm && (cd ~/.nvm && git checkout `git describe --abbrev=0 --tags`) && source ~/.nvm/nvm.sh && nvm install $TRAVIS_NODE_VERSION
 - npm install
 - git config --global user.email "travis-ci-build@volusion.com"
 - git config --global user.name "Travis CI Build"
