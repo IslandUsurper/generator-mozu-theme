@@ -29,4 +29,4 @@ deploy:
   on:
     tags: true
     all_branches: true
-    condition: $TRAVIS_NODE_VERSION = "stable" -a $TRAVIS_OS_NAME = "darwin"
+    condition: $TRAVIS_NODE_VERSION = "stable" && $TRAVIS_OS_NAME = "darwin"
