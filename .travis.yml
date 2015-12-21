@@ -28,4 +28,4 @@ deploy:
   skip_cleanup: true
   on:
     all_branches: true
-    condition: $TRAVIS_NODE_VERSION = "stable" && $TRAVIS_OS_NAME = "darwin" && -n "TRAVIS_TAG"
+    condition: $TRAVIS_NODE_VERSION = "stable" && $TRAVIS_OS_NAME = "linux" && -n "TRAVIS_TAG"
