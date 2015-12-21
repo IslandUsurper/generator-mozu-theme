@@ -12,6 +12,7 @@
     "ci-build": "npm test",
     "ci-build-stable": "npm run ci-build",
     "postci-build-stable": "mozu-validate-npm-package",
+    "preversion": "npm run ci-build-stable",
     "test": "tape ./test/*.js",
     "cov": "istanbul cover ./test/*.js",
     "spec": "npm test | tap-spec"
