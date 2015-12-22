@@ -30,6 +30,6 @@ build: off
 # Talk to Slack.
 notifications:
   - provider: Slack
-  - auth_token:
+    auth_token:
       secure: jpmRZ9H5UGhAGstWdj0WWiLoz+NyL6+QrGVyzEkRkKLnwxi1ULuqkxSQ63D3LGr3eL2GiHbvxg5lzdrdirt82g==
-      channel: mozu-build-status
+    channel: mozu-build-status
