@@ -1,6 +1,6 @@
 {
   "name": "generator-mozu-theme",
-  "version": "2.0.11",
+  "version": "2.0.12",
   "description": "Yeoman generator for creating Mozu Themes",
   "main": "generators/app/index.js",
   "repository": "mozu/generator-mozu-theme",

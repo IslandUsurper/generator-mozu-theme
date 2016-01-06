@@ -3,6 +3,9 @@ os:
 - linux
 - osx
 sudo: false
+branches:
+  except:
+    - /^v[0-9]/
 env:
   matrix:
   - TRAVIS_NODE_VERSION="4.1"

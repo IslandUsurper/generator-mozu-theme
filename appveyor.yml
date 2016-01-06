@@ -7,6 +7,10 @@ environment:
     - nodejs_version: "4.2"
     - nodejs_version: "5"
 
+branches:
+  except:
+    - /^v[0-9]/
+
 # Install scripts. (runs after repo cloning)
 install:
   # Get the latest stable version of Node 0.STABLE.latest
