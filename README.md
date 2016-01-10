@@ -92,7 +92,6 @@ Run `yo mozu-theme:existingrepo` and give it the address of an existing Git repo
 The `yo mozu-theme` command takes some options at the command line.
 
  - `--verbose` to print very detailed logging
- - `--skip-prompts` to infer as many things as possible without pausing to ask questions
  - `--skip-app` to skip the generation of Mozu App Config to sync with Developer Center
  - `--skip-install` to skip the install of NPM packages
 
