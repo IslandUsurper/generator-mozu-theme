@@ -41,7 +41,7 @@ test('errors informatively when directory is not empty', t => {
       message = e.message;
     }
     t.ok(
-      message.match(/current directory contains files that are not a Mozu theme/),
+      message.match(/current directory contains files/),
       `error message is ${message}`
     );
   });
