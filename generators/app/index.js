@@ -764,10 +764,11 @@ module.exports = FancyLoggingGenerator.extend({
     let it = this.state;
     switch(true) {
       case !it.isEmptyDir && !it.hasThemeJson:
-        this._die('The current directory contains files that are not a Mozu ' +
+        this._die('The current directory contains files (including dot files) that are not a Mozu ' +
                   'theme. This generator should only be run in an empty ' +
                   'directory, **or** a directory that contains an existing ' +
-                  'theme that needs to be upgraded.');
+                  'theme that needs to be upgraded. If this problem persists ' +
+                  'please create a new directory and run yo mozu-theme');
         break;
       case it.errorInThemeJson:
         this._die('Could not parse `theme.json` file in this directory. ' +
