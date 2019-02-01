@@ -92,7 +92,7 @@
       "check": {
         "command": "check"
       },
-      "compile": {
+      "fullcompile": {
         "command": "compile"
       },
       "quickcompile": {
