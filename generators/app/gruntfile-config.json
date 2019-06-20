@@ -39,7 +39,7 @@
           "templates/**/*",
           "*thumb.png",
           "*thumb.jpg",
-          "!*.orig",
+          "!**/*.orig",
           "!.inherited"
         ],
         "tasks": [
@@ -70,7 +70,7 @@
           "*thumb.png",
           "*thumb.jpg",
           "theme-ui.json",
-          "!*.orig",
+          "!**/*.orig",
           "!.inherited"
         ]
       },
